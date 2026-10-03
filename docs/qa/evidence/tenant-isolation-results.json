@@ -1,0 +1,132 @@
+{
+  "base": "http://127.0.0.1:3001/api/v1",
+  "stamp": "mupn36g6",
+  "tenants": {
+    "A": {
+      "code": "DED",
+      "id": "a0000000-0000-4000-8000-000000000001",
+      "email": "admin@saa.com"
+    },
+    "B": {
+      "code": "DEMO",
+      "id": "b0000000-0000-4000-8000-000000000002",
+      "email": "admin@demo.local"
+    },
+    "CRM": {
+      "email": "crm@platform.local"
+    }
+  },
+  "summary": {
+    "Pass": 15,
+    "Fail": 0,
+    "Blocked": 0,
+    "N/A": 0
+  },
+  "results": {
+    "TN-ISO-001": {
+      "id": "TN-ISO-001",
+      "status": "Pass",
+      "actual": "aCount=30 foreign=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.053Z"
+    },
+    "TN-ISO-002": {
+      "id": "TN-ISO-002",
+      "status": "Pass",
+      "actual": "status=200 hits=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.068Z"
+    },
+    "TN-ISO-003": {
+      "id": "TN-ISO-003",
+      "status": "Pass",
+      "actual": "status=404",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.077Z"
+    },
+    "TN-ISO-004": {
+      "id": "TN-ISO-004",
+      "status": "Pass",
+      "actual": "a=14 b=0 listLeak=0 directB=404",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.115Z"
+    },
+    "TN-ISO-005": {
+      "id": "TN-ISO-005",
+      "status": "Pass",
+      "actual": "a=43 b=0 listLeak=0 directB=404",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.154Z"
+    },
+    "TN-ISO-006": {
+      "id": "TN-ISO-006",
+      "status": "Pass",
+      "actual": "a=100 b=0 listLeak=0 directB=404",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.210Z"
+    },
+    "TN-ISO-007": {
+      "id": "TN-ISO-007",
+      "status": "Pass",
+      "actual": "a=200 b=200 leak=false",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.235Z"
+    },
+    "TN-ISO-008": {
+      "id": "TN-ISO-008",
+      "status": "Pass",
+      "actual": "status=200 len=1885 leak=false",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.250Z"
+    },
+    "TN-ISO-009": {
+      "id": "TN-ISO-009",
+      "status": "Pass",
+      "actual": "status=403 leak=false",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.256Z"
+    },
+    "TN-ISO-010": {
+      "id": "TN-ISO-010",
+      "status": "Pass",
+      "actual": "gl=403 students=403",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.267Z"
+    },
+    "TN-ISO-011": {
+      "id": "TN-ISO-011",
+      "status": "Pass",
+      "actual": "status=403",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.273Z"
+    },
+    "TN-ISO-012": {
+      "id": "TN-ISO-012",
+      "status": "Pass",
+      "actual": "aLeak=false demoHas=true a=24 b=1",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.294Z"
+    },
+    "TN-ISO-013": {
+      "id": "TN-ISO-013",
+      "status": "Pass",
+      "actual": "aOrg=D' Educationist bOrg=Demo Agency (MT4)",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.315Z"
+    },
+    "TN-ISO-014": {
+      "id": "TN-ISO-014",
+      "status": "Pass",
+      "actual": "up=201 key=a0000000-0000-4000-8000-000000000001/35a361ef-d715-483b-bc69-f2e9968e3e44.txt cross=404",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.578Z"
+    },
+    "TN-ISO-015": {
+      "id": "TN-ISO-015",
+      "status": "Pass",
+      "actual": "bCount=1 foreignA=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:36.589Z"
+    }
+  }
+}

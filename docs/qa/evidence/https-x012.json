@@ -1,0 +1,25 @@
+{
+  "tc": "X-012",
+  "status": "Pass",
+  "at": "2026-09-29T15:19:04.400Z",
+  "api": {
+    "httpsUrl": "https://localhost:3443/api/v1/health",
+    "httpStatus": 200,
+    "body": {
+      "status": "ok",
+      "service": "d-educationist-accounting-api",
+      "milestone": "M15",
+      "database": "up",
+      "note": "API process is running and PostgreSQL responded."
+    },
+    "tls": true,
+    "forceHttps": true
+  },
+  "spa": {
+    "skipped": false,
+    "status": 200,
+    "httpsUrl": "https://localhost:5174/",
+    "bodySnippet": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/dedu"
+  },
+  "notes": "Self-signed local HTTPS proves Nest can serve TLS (HTTPS_KEY_PATH/CERT) and FORCE_HTTPS is wired. Production should use CA certs or a TLS terminator per docs/DEPLOYMENT.md."
+}

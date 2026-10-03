@@ -1,0 +1,22 @@
+import type { Invoice } from '@/types'
+
+export const invoices: Invoice[] = [
+  { id: 'inv1', invoiceNo: 'INV-KHI-2026-001', branchId: 'khi', invoiceDate: '2026-03-15', poNumber: 'PO-UM-4521', currency: 'GBP', status: 'Fully Received', lines: [{ id: 'il1', studentId: 's1', tuitionFee: 22000, scholarship: 2000, commissionRate: 15, bonus: 500 }] },
+  { id: 'inv2', invoiceNo: 'INV-LHR-2026-002', branchId: 'lhr', invoiceDate: '2026-03-20', currency: 'USD', status: 'Sent', lines: [{ id: 'il2', studentId: 's2', tuitionFee: 45000, scholarship: 5000, commissionRate: 12.5, bonus: 0 }] },
+  { id: 'inv3', invoiceNo: 'INV-ISB-2026-003', branchId: 'isb', invoiceDate: '2026-04-01', currency: 'CAD', status: 'Partially Received', lines: [{ id: 'il3', studentId: 's3', tuitionFee: 38000, scholarship: 3000, commissionRate: 17.5, bonus: 200 }] },
+  { id: 'inv4', invoiceNo: 'INV-KHI-2026-004', branchId: 'khi', invoiceDate: '2026-04-10', currency: 'GBP', status: 'Fully Received', lines: [{ id: 'il4', studentId: 's5', tuitionFee: 18500, scholarship: 1500, commissionRate: 15, bonus: 0 }] },
+  { id: 'inv5', invoiceNo: 'INV-LHR-2026-005', branchId: 'lhr', invoiceDate: '2026-04-15', currency: 'USD', status: 'Draft', lines: [{ id: 'il5', studentId: 's6', tuitionFee: 52000, scholarship: 8000, commissionRate: 10, bonus: 1000 }] },
+  { id: 'inv6', invoiceNo: 'INV-MUL-2026-006', branchId: 'khi', invoiceDate: '2026-04-20', currency: 'CAD', status: 'Sent', lines: [{ id: 'il6', studentId: 's8', tuitionFee: 35000, scholarship: 4000, commissionRate: 12.5, bonus: 0 }] },
+  { id: 'inv7', invoiceNo: 'INV-KHI-2026-007', branchId: 'khi', invoiceDate: '2026-05-01', currency: 'USD', status: 'Partially Received', lines: [{ id: 'il7', studentId: 's11', tuitionFee: 48000, scholarship: 6000, commissionRate: 12.5, bonus: 300 }] },
+  { id: 'inv8', invoiceNo: 'INV-LHR-2026-008', branchId: 'lhr', invoiceDate: '2026-05-05', currency: 'AUD', status: 'Fully Received', lines: [{ id: 'il8', studentId: 's14', tuitionFee: 39000, scholarship: 3000, commissionRate: 17.5, bonus: 0 }] },
+  { id: 'inv9', invoiceNo: 'INV-ISB-2026-009', branchId: 'isb', invoiceDate: '2026-05-10', currency: 'USD', status: 'Sent', lines: [{ id: 'il9', studentId: 's15', tuitionFee: 50000, scholarship: 7000, commissionRate: 10, bonus: 0 }] },
+  { id: 'inv10', invoiceNo: 'INV-MUL-2026-010', branchId: 'mul', invoiceDate: '2026-05-15', currency: 'CAD', status: 'Closed', lines: [{ id: 'il10', studentId: 's17', tuitionFee: 28000, scholarship: 2000, commissionRate: 15, bonus: 150 }] },
+  { id: 'inv11', invoiceNo: 'INV-FSD-2026-011', branchId: 'lhr', invoiceDate: '2026-05-20', currency: 'USD', status: 'Fully Received', lines: [{ id: 'il11', studentId: 's19', tuitionFee: 46000, scholarship: 4000, commissionRate: 12.5, bonus: 0 }] },
+  { id: 'inv12', invoiceNo: 'INV-KHI-2026-012', branchId: 'khi', invoiceDate: '2026-06-01', currency: 'GBP', status: 'Draft', lines: [{ id: 'il12', studentId: 's20', tuitionFee: 23000, scholarship: 2500, commissionRate: 15, bonus: 0 }] },
+  { id: 'inv13', invoiceNo: 'INV-ISB-2026-013', branchId: 'isb', invoiceDate: '2026-06-05', currency: 'CAD', status: 'Sent', lines: [{ id: 'il13', studentId: 's21', tuitionFee: 40000, scholarship: 5000, commissionRate: 17.5, bonus: 400 }] },
+  { id: 'inv14', invoiceNo: 'INV-FSD-2026-014', branchId: 'fsd', invoiceDate: '2026-06-10', currency: 'USD', status: 'Partially Received', lines: [{ id: 'il14', studentId: 's23', tuitionFee: 44000, scholarship: 5000, commissionRate: 12.5, bonus: 0 }] },
+  { id: 'inv15', invoiceNo: 'INV-LHR-2026-015', branchId: 'lhr', invoiceDate: '2026-06-15', currency: 'GBP', status: 'Sent', lines: [{ id: 'il15', studentId: 's16', tuitionFee: 26000, scholarship: 3000, commissionRate: 12.5, bonus: 0 }] },
+  { id: 'inv16', invoiceNo: 'INV-KHI-2026-016', branchId: 'khi', invoiceDate: '2026-06-20', currency: 'CAD', status: 'Draft', lines: [{ id: 'il16', studentId: 's25', tuitionFee: 36000, scholarship: 4000, commissionRate: 20, bonus: 250 }] },
+  { id: 'inv17', invoiceNo: 'INV-MUL-2026-017', branchId: 'mul', invoiceDate: '2026-06-25', currency: 'CAD', status: 'Sent', lines: [{ id: 'il17', studentId: 's12', tuitionFee: 55000, scholarship: 10000, commissionRate: 20, bonus: 0 }] },
+  { id: 'inv18', invoiceNo: 'INV-ISB-2026-018', branchId: 'isb', invoiceDate: '2026-07-01', currency: 'AUD', status: 'Partially Received', lines: [{ id: 'il18', studentId: 's9', tuitionFee: 42000, scholarship: 2000, commissionRate: 17.5, bonus: 600 }] },
+]

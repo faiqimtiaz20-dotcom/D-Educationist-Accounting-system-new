@@ -1,0 +1,167 @@
+{
+  "base": "http://127.0.0.1:3001/api/v1",
+  "stamp": "mupn38gc",
+  "branches": {
+    "A": {
+      "code": "KHI",
+      "id": "c92127d0-32e1-40b9-8afd-20929b9011bc"
+    },
+    "B": {
+      "code": "LHR",
+      "id": "49b316b5-13ea-40c3-9ada-fcc25b90b481"
+    }
+  },
+  "users": {
+    "A": "ahmed@saa.com",
+    "B": "sara@saa.com",
+    "admin": "admin@saa.com"
+  },
+  "summary": {
+    "Pass": 20,
+    "Fail": 0,
+    "Blocked": 0,
+    "N/A": 0
+  },
+  "results": {
+    "BR-ISO-001": {
+      "id": "BR-ISO-001",
+      "status": "Pass",
+      "actual": "n=30 foreignLHR=0 hasStudentA=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.238Z"
+    },
+    "BR-ISO-002": {
+      "id": "BR-ISO-002",
+      "status": "Pass",
+      "actual": "searchHitsForB=0 status=200",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.253Z"
+    },
+    "BR-ISO-003": {
+      "id": "BR-ISO-003",
+      "status": "Pass",
+      "actual": "GET /students/b213b8d3-3f23-4bc7-9452-a661655f7418 status=403",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.267Z"
+    },
+    "BR-ISO-004": {
+      "id": "BR-ISO-004",
+      "status": "Pass",
+      "actual": "invoices=14 foreignLHR=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.285Z"
+    },
+    "BR-ISO-005": {
+      "id": "BR-ISO-005",
+      "status": "Pass",
+      "actual": "receivables=30 foreignLHR=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.308Z"
+    },
+    "BR-ISO-006": {
+      "id": "BR-ISO-006",
+      "status": "Pass",
+      "actual": "expenses=34 foreignLHR=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.330Z"
+    },
+    "BR-ISO-007": {
+      "id": "BR-ISO-007",
+      "status": "Pass",
+      "actual": "pettyCash=24 foreignLHR=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.352Z"
+    },
+    "BR-ISO-008": {
+      "id": "BR-ISO-008",
+      "status": "Pass",
+      "actual": "banks=1 foreignBanks=0 balForeign=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.379Z"
+    },
+    "BR-ISO-009": {
+      "id": "BR-ISO-009",
+      "status": "Pass",
+      "actual": "journals=100 foreignLHR=0 TB=200",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.442Z"
+    },
+    "BR-ISO-010": {
+      "id": "BR-ISO-010",
+      "status": "Pass",
+      "actual": "incomeForeign=0 branchIncomeOnlyKhi=true statuses=200/200",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.490Z"
+    },
+    "BR-ISO-011": {
+      "id": "BR-ISO-011",
+      "status": "Pass",
+      "actual": "queryStatus=403 sneakHasB=false createStatus=403 createdBranch=null",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.505Z"
+    },
+    "BR-ISO-012": {
+      "id": "BR-ISO-012",
+      "status": "Pass",
+      "actual": "isoSearchHits=10 foreign=0",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.519Z"
+    },
+    "BR-ISO-013": {
+      "id": "BR-ISO-013",
+      "status": "Pass",
+      "actual": "adminKhiStudents=30 hasA=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.533Z"
+    },
+    "BR-ISO-014": {
+      "id": "BR-ISO-014",
+      "status": "Pass",
+      "actual": "adminLhrStudents=1 hasB=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.541Z"
+    },
+    "BR-ISO-015": {
+      "id": "BR-ISO-015",
+      "status": "Pass",
+      "actual": "adminAll=31 hasBothMarkers=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.555Z"
+    },
+    "BR-ISO-016": {
+      "id": "BR-ISO-016",
+      "status": "Pass",
+      "actual": "create=201 A=200 B=200 inListA=true inListB=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:39.925Z"
+    },
+    "BR-ISO-017": {
+      "id": "BR-ISO-017",
+      "status": "Pass",
+      "actual": "patch=200 A=200/ISO-ORG-mupn38gc Bmgr=200/ISO-ORG-mupn38gc",
+      "defectId": null,
+      "at": "2026-10-01T14:38:40.083Z"
+    },
+    "BR-ISO-018": {
+      "id": "BR-ISO-018",
+      "status": "Pass",
+      "actual": "create=201 branchId=c92127d0-32e1-40b9-8afd-20929b9011bc A=200 B=403 uniShared=true",
+      "defectId": null,
+      "at": "2026-10-01T14:38:40.149Z"
+    },
+    "BR-ISO-019": {
+      "id": "BR-ISO-019",
+      "status": "Pass",
+      "actual": "counsellorLeak=false invoiceKhiLeak=0 rptStatus=200",
+      "defectId": null,
+      "at": "2026-10-01T14:38:40.172Z"
+    },
+    "BR-ISO-020": {
+      "id": "BR-ISO-020",
+      "status": "Pass",
+      "actual": "csvStatus=200 len=1885 hasLHR=false",
+      "defectId": null,
+      "at": "2026-10-01T14:38:40.189Z"
+    }
+  }
+}

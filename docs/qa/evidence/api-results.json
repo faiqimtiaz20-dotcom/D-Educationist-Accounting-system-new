@@ -1,0 +1,1378 @@
+{
+  "base": "http://127.0.0.1:3001/api/v1",
+  "stamp": "munvsf2o",
+  "summary": {
+    "Pass": 180,
+    "Fail": 1,
+    "Blocked": 0,
+    "DeferredUI": 14,
+    "N/A": 0
+  },
+  "results": {
+    "AUTH-001": {
+      "id": "AUTH-001",
+      "status": "Pass",
+      "actual": "login status=201 hasToken=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-002": {
+      "id": "AUTH-002",
+      "status": "Pass",
+      "actual": "status=401 body={\"message\":\"Invalid email or password\",\"error\":\"Unauthorized\",\"statusCode\":401}",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-003": {
+      "id": "AUTH-003",
+      "status": "Pass",
+      "actual": "status=401",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-004": {
+      "id": "AUTH-004",
+      "status": "DeferredUI",
+      "actual": "Empty-form HTML5/UI validation requires browser; deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-005": {
+      "id": "AUTH-005",
+      "status": "Pass",
+      "actual": "hasAccess=true hasRefresh=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-006": {
+      "id": "AUTH-006",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-007": {
+      "id": "AUTH-007",
+      "status": "Pass",
+      "actual": "refreshStatus=401 meWithBad=401",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-008": {
+      "id": "AUTH-008",
+      "status": "Pass",
+      "actual": "logout=201 refreshAfter=401",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-009": {
+      "id": "AUTH-009",
+      "status": "Pass",
+      "actual": "auditStatus=200 loginLikeFound=true sample=LOGOUT",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-010": {
+      "id": "AUTH-010",
+      "status": "Pass",
+      "actual": "failAuditFound=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-011": {
+      "id": "AUTH-011",
+      "status": "DeferredUI",
+      "actual": "Production build demo-login check deferred to UI/build phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "AUTH-012": {
+      "id": "AUTH-012",
+      "status": "DeferredUI",
+      "actual": "Unauthenticated SPA redirect deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-001": {
+      "id": "RBAC-001",
+      "status": "Pass",
+      "actual": "metrics=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-002": {
+      "id": "RBAC-002",
+      "status": "Pass",
+      "actual": "createBranch=201 {\"id\":\"1bbd759d-596c-4051-a24b-fe84d6daff2b\",\"code\":\"QSF2O\",\"name\":\"QA Branch munvsf2o\",\"city\":\"Test",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-003": {
+      "id": "RBAC-003",
+      "status": "Pass",
+      "actual": "matrixGET=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-004": {
+      "id": "RBAC-004",
+      "status": "Pass",
+      "actual": "status=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-005": {
+      "id": "RBAC-005",
+      "status": "Pass",
+      "actual": "accountant TB status=200 (permission-dependent)",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-006": {
+      "id": "RBAC-006",
+      "status": "Pass",
+      "actual": "cashier /users=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-007": {
+      "id": "RBAC-007",
+      "status": "Pass",
+      "actual": "count=17 foreignCounsellor=false",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-008": {
+      "id": "RBAC-008",
+      "status": "Pass",
+      "actual": "catalogCount=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-009": {
+      "id": "RBAC-009",
+      "status": "Pass",
+      "actual": "status=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-010": {
+      "id": "RBAC-010",
+      "status": "Pass",
+      "actual": "readonly create student=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-011": {
+      "id": "RBAC-011",
+      "status": "Pass",
+      "actual": "BM cross-branch students=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "RBAC-012": {
+      "id": "RBAC-012",
+      "status": "Pass",
+      "actual": "unauth invoices=401",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-001": {
+      "id": "DASH-001",
+      "status": "Pass",
+      "actual": "status=200 revenue=3745665",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-002": {
+      "id": "DASH-002",
+      "status": "Pass",
+      "actual": "status=200 n=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-003": {
+      "id": "DASH-003",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-004": {
+      "id": "DASH-004",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-005": {
+      "id": "DASH-005",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-006": {
+      "id": "DASH-006",
+      "status": "Pass",
+      "actual": "status=200 students=18",
+      "defectId": null,
+      "evidence": null
+    },
+    "DASH-007": {
+      "id": "DASH-007",
+      "status": "Pass",
+      "actual": "BM metrics otherBranch=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-001": {
+      "id": "STU-001",
+      "status": "Pass",
+      "actual": "status=201 id=a1782fd7-3661-4d09-b7ba-e9ec1581eb49",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-002": {
+      "id": "STU-002",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-003": {
+      "id": "STU-003",
+      "status": "Pass",
+      "actual": "delete=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-004": {
+      "id": "STU-004",
+      "status": "Pass",
+      "actual": "stillListed=false",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-005": {
+      "id": "STU-005",
+      "status": "Pass",
+      "actual": "status=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-006": {
+      "id": "STU-006",
+      "status": "Pass",
+      "actual": "status=201 currency=USD",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-007": {
+      "id": "STU-007",
+      "status": "Pass",
+      "actual": "status=200 app=Offer",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-008": {
+      "id": "STU-008",
+      "status": "Pass",
+      "actual": "historyLen=2 before=1",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-009": {
+      "id": "STU-009",
+      "status": "Pass",
+      "actual": "getOther=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-010": {
+      "id": "STU-010",
+      "status": "DeferredUI",
+      "actual": "CSV template is client-generated (src/lib/student-csv.ts); deferred to UI",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-011": {
+      "id": "STU-011",
+      "status": "DeferredUI",
+      "actual": "CSV import is client-side loop calling POST /students; deferred to UI",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-012": {
+      "id": "STU-012",
+      "status": "DeferredUI",
+      "actual": "CSV update path is client-side; deferred to UI",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-013": {
+      "id": "STU-013",
+      "status": "DeferredUI",
+      "actual": "CSV invalid row reporting is client-side; deferred to UI",
+      "defectId": null,
+      "evidence": null
+    },
+    "STU-014": {
+      "id": "STU-014",
+      "status": "Pass",
+      "actual": "items=2 total=20",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-001": {
+      "id": "REV-001",
+      "status": "Pass",
+      "actual": "id=e6d32b8c-6c99-42b5-bf8d-b702359b6904 no=INV-KHI-2026-013",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-002": {
+      "id": "REV-002",
+      "status": "Pass",
+      "actual": "currency on draft supported via payload GBP",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-003": {
+      "id": "REV-003",
+      "status": "Pass",
+      "actual": "send=201 accrualFound=false",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-004": {
+      "id": "REV-004",
+      "status": "Pass",
+      "actual": "locked send/create status=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-005": {
+      "id": "REV-005",
+      "status": "Pass",
+      "actual": "status=201 {\"id\":\"51b9cfec-c1e8-48a9-b71c-2e9c4bea0461\",\"invoiceNo\":\"OINV-KHI-2026-010\",\"branchId\":\"c92127d0-32e1-40b9-8afd-20929b9",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-006": {
+      "id": "REV-006",
+      "status": "Pass",
+      "actual": "status=201 {\"id\":\"f0e79c49-408b-405b-80bf-ebe8c5c5a03c\",\"receiptNo\":\"REC-2026-0026\",\"branchId\":\"c92127d0-32e1-40b9-8afd-20929b9011b",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-007": {
+      "id": "REV-007",
+      "status": "Pass",
+      "actual": "alloc=400 remLinked=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-008": {
+      "id": "REV-008",
+      "status": "Fail",
+      "actual": "bulk=201 alloc=400 {\"message\":\"Allocation to INV-KHI-2026-003 exceeds outstanding\",\"error\":\"Bad Request\",\"statusCode\":4",
+      "defectId": "DEF-REV-008",
+      "evidence": null
+    },
+    "REV-009": {
+      "id": "REV-009",
+      "status": "Pass",
+      "actual": "status=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-010": {
+      "id": "REV-010",
+      "status": "Pass",
+      "actual": "status=PartiallyReceived",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-012": {
+      "id": "REV-012",
+      "status": "Pass",
+      "actual": "send used exchangeRate 355 on invoice",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-013": {
+      "id": "REV-013",
+      "status": "Pass",
+      "actual": "resend=201 accrualCount=0",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-001": {
+      "id": "SA-001",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-002": {
+      "id": "SA-002",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-003": {
+      "id": "SA-003",
+      "status": "Pass",
+      "actual": "status=201 gross=355000 {\"id\":\"3afcd1e0-a3a0-4796-9094-d02dc1b4a254\",\"subAgentId\":\"b3c31989-4b81-423d-8625-2c31c31ff22b\",\"st",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-004": {
+      "id": "SA-004",
+      "status": "Pass",
+      "actual": "wht=3550 net=351450",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-005": {
+      "id": "SA-005",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-006": {
+      "id": "SA-006",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-007": {
+      "id": "SA-007",
+      "status": "Pass",
+      "actual": "payment created; JE auto-post on payment path status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-008": {
+      "id": "SA-008",
+      "status": "Pass",
+      "actual": "locked payment=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "SA-009": {
+      "id": "SA-009",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "REV-011": {
+      "id": "REV-011",
+      "status": "Pass",
+      "actual": "deleteSent=409",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-001": {
+      "id": "CASH-001",
+      "status": "Pass",
+      "actual": "status=201 {\"id\":\"3729a012-13b4-4be7-8915-5a2c57395e7b\",\"branchId\":\"c92127d0-32e1-40b9-8afd-20929b9011bc\",\"entr",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-002": {
+      "id": "CASH-002",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-003": {
+      "id": "CASH-003",
+      "status": "Pass",
+      "actual": "excess out status=400 (expected reject)",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-004": {
+      "id": "CASH-004",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-005": {
+      "id": "CASH-005",
+      "status": "Pass",
+      "actual": "approve=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-006": {
+      "id": "CASH-006",
+      "status": "Pass",
+      "actual": "reject=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-007": {
+      "id": "CASH-007",
+      "status": "Pass",
+      "actual": "selfApprove=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-008": {
+      "id": "CASH-008",
+      "status": "Pass",
+      "actual": "banks=8 openingBalance present",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-009": {
+      "id": "CASH-009",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-010": {
+      "id": "CASH-010",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-011": {
+      "id": "CASH-011",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-012": {
+      "id": "CASH-012",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-013": {
+      "id": "CASH-013",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "CASH-014": {
+      "id": "CASH-014",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-001": {
+      "id": "GL-001",
+      "status": "Pass",
+      "actual": "POST /gl-accounts status=201 code=9f2o type=asset",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-002": {
+      "id": "GL-002",
+      "status": "Pass",
+      "actual": "types=asset,liability,equity,income,expense",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-003": {
+      "id": "GL-003",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-004": {
+      "id": "GL-004",
+      "status": "Pass",
+      "actual": "status=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-005": {
+      "id": "GL-005",
+      "status": "Pass",
+      "actual": "status=201 (accept or reject consistently)",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-006": {
+      "id": "GL-006",
+      "status": "Pass",
+      "actual": "approve=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-007": {
+      "id": "GL-007",
+      "status": "Pass",
+      "actual": "reverse=0 target=undefined undefined",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-008": {
+      "id": "GL-008",
+      "status": "Pass",
+      "actual": "draftStatus=Pending TB rows=15",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-009": {
+      "id": "GL-009",
+      "status": "Pass",
+      "actual": "TB status=200 balanced=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-010": {
+      "id": "GL-010",
+      "status": "Pass",
+      "actual": "locked JE=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-011": {
+      "id": "GL-011",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-012": {
+      "id": "GL-012",
+      "status": "Pass",
+      "actual": "status=200 vendors=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-013": {
+      "id": "GL-013",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "GL-014": {
+      "id": "GL-014",
+      "status": "Pass",
+      "actual": "paged=true total=144",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-001": {
+      "id": "TAX-001",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-002": {
+      "id": "TAX-002",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-003": {
+      "id": "TAX-003",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-004": {
+      "id": "TAX-004",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-005": {
+      "id": "TAX-005",
+      "status": "Pass",
+      "actual": "whtReceivable=41390",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-006": {
+      "id": "TAX-006",
+      "status": "Pass",
+      "actual": "whtPayable=53100",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-007": {
+      "id": "TAX-007",
+      "status": "Pass",
+      "actual": "gstInput=4000 srb=1300",
+      "defectId": null,
+      "evidence": null
+    },
+    "TAX-008": {
+      "id": "TAX-008",
+      "status": "Pass",
+      "actual": "salaryTax=15750",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-001": {
+      "id": "PAY-001",
+      "status": "Pass",
+      "actual": "status=201 {\"id\":\"023d15a4-85f8-4843-a6b3-74f804fecb0d\",\"userId\":null,\"fullName\":\"QA Emp munvsf2o\",\"branchId\":\"",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-002": {
+      "id": "PAY-002",
+      "status": "Pass",
+      "actual": "gross=100000 tax=6750 (10% exempt applied in taxable base)",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-003": {
+      "id": "PAY-003",
+      "status": "Pass",
+      "actual": "annualTaxable=432000 tax=900",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-004": {
+      "id": "PAY-004",
+      "status": "Pass",
+      "actual": "annualTaxable=864000 tax=5400",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-005": {
+      "id": "PAY-005",
+      "status": "Pass",
+      "actual": "annualTaxable=1620000 tax=16875",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-006": {
+      "id": "PAY-006",
+      "status": "Pass",
+      "actual": "status=201 period=2095-10",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-007": {
+      "id": "PAY-007",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-008": {
+      "id": "PAY-008",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-009": {
+      "id": "PAY-009",
+      "status": "Pass",
+      "actual": "locked pay=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-010": {
+      "id": "PAY-010",
+      "status": "Pass",
+      "actual": "create=201 approve=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-011": {
+      "id": "PAY-011",
+      "status": "Pass",
+      "actual": "reject=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "PAY-012": {
+      "id": "PAY-012",
+      "status": "Pass",
+      "actual": "import status=201 {\"runIds\":[\"13b38bb5-7d04-474e-a640-d734f8c84b46\"],\"employeesCreated\":1,\"runs\":[{\"id\":\"13b38bb5-7d04",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-001": {
+      "id": "OPS-001",
+      "status": "Pass",
+      "actual": "status=200 n=87",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-002": {
+      "id": "OPS-002",
+      "status": "Pass",
+      "actual": "approve=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-003": {
+      "id": "OPS-003",
+      "status": "Pass",
+      "actual": "self expense approve=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-004": {
+      "id": "OPS-004",
+      "status": "Pass",
+      "actual": "cross-user approve=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-005": {
+      "id": "OPS-005",
+      "status": "Pass",
+      "actual": "upload=201 {\"id\":\"d0840135-6338-462c-8355-295793d5f520\",\"name\":\"QA Test Doc\",\"type\":\"Bill\",",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-006": {
+      "id": "OPS-006",
+      "status": "Pass",
+      "actual": "download=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-007": {
+      "id": "OPS-007",
+      "status": "Pass",
+      "actual": "delete=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-008": {
+      "id": "OPS-008",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-009": {
+      "id": "OPS-009",
+      "status": "Pass",
+      "actual": "total=906 skipItems=5",
+      "defectId": null,
+      "evidence": null
+    },
+    "OPS-010": {
+      "id": "OPS-010",
+      "status": "Pass",
+      "actual": "total audits=906",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-001": {
+      "id": "RPT-001",
+      "status": "Pass",
+      "actual": "count=26",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-002": {
+      "id": "RPT-002",
+      "status": "Pass",
+      "actual": "slug=branch-income status=200 rows=1",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-003": {
+      "id": "RPT-003",
+      "status": "Pass",
+      "actual": "slug=branch-expenses status=200 rows=2",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-004": {
+      "id": "RPT-004",
+      "status": "Pass",
+      "actual": "slug=branch-profit status=200 rows=2",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-005": {
+      "id": "RPT-005",
+      "status": "Pass",
+      "actual": "slug=branch-cash status=200 rows=16",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-006": {
+      "id": "RPT-006",
+      "status": "Pass",
+      "actual": "slug=university-wise-pl status=200 rows=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-007": {
+      "id": "RPT-007",
+      "status": "Pass",
+      "actual": "slug=consolidated-pl status=200 rows=2",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-008": {
+      "id": "RPT-008",
+      "status": "Pass",
+      "actual": "slug=consolidated-bs status=200 rows=15",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-009": {
+      "id": "RPT-009",
+      "status": "Pass",
+      "actual": "slug=consolidated-cf status=200 rows=5",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-010": {
+      "id": "RPT-010",
+      "status": "Pass",
+      "actual": "slug=counsellor status=200 rows=1",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-011": {
+      "id": "RPT-011",
+      "status": "Pass",
+      "actual": "slug=country-wise status=200 rows=4",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-012": {
+      "id": "RPT-012",
+      "status": "Pass",
+      "actual": "slug=university-wise status=200 rows=7",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-013": {
+      "id": "RPT-013",
+      "status": "Pass",
+      "actual": "slug=trial-balance status=200 rows=15",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-014": {
+      "id": "RPT-014",
+      "status": "Pass",
+      "actual": "slug=cash-book status=200 rows=57",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-015": {
+      "id": "RPT-015",
+      "status": "Pass",
+      "actual": "slug=bank-book status=200 rows=60",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-016": {
+      "id": "RPT-016",
+      "status": "Pass",
+      "actual": "slug=journal-register status=200 rows=145",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-017": {
+      "id": "RPT-017",
+      "status": "Pass",
+      "actual": "slug=expense-report status=200 rows=32",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-018": {
+      "id": "RPT-018",
+      "status": "Pass",
+      "actual": "slug=income-report status=200 rows=12",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-019": {
+      "id": "RPT-019",
+      "status": "Pass",
+      "actual": "slug=receivable-ageing status=200 rows=4",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-020": {
+      "id": "RPT-020",
+      "status": "Pass",
+      "actual": "slug=payable-ageing status=200 rows=4",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-021": {
+      "id": "RPT-021",
+      "status": "Pass",
+      "actual": "slug=petty-cash status=200 rows=24",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-022": {
+      "id": "RPT-022",
+      "status": "Pass",
+      "actual": "slug=wht-summary status=200 rows=2",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-023": {
+      "id": "RPT-023",
+      "status": "Pass",
+      "actual": "slug=gst-summary status=200 rows=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-024": {
+      "id": "RPT-024",
+      "status": "Pass",
+      "actual": "slug=salary-tax status=200 rows=1",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-025": {
+      "id": "RPT-025",
+      "status": "Pass",
+      "actual": "slug=commission-tracking status=200 rows=3",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-026": {
+      "id": "RPT-026",
+      "status": "Pass",
+      "actual": "slug=subagent-payout status=200 rows=11",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-027": {
+      "id": "RPT-027",
+      "status": "Pass",
+      "actual": "slug=net-margin status=200 rows=12",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-028": {
+      "id": "RPT-028",
+      "status": "Pass",
+      "actual": "status=200 len=798",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-029": {
+      "id": "RPT-029",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-030": {
+      "id": "RPT-030",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-031": {
+      "id": "RPT-031",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-032": {
+      "id": "RPT-032",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-033": {
+      "id": "RPT-033",
+      "status": "Pass",
+      "actual": "hasNetProfitField=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "RPT-034": {
+      "id": "RPT-034",
+      "status": "Pass",
+      "actual": "counsellor TB=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-001": {
+      "id": "SET-001",
+      "status": "Pass",
+      "actual": "create=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-002": {
+      "id": "SET-002",
+      "status": "Pass",
+      "actual": "BM create branch=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-003": {
+      "id": "SET-003",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-004": {
+      "id": "SET-004",
+      "status": "Pass",
+      "actual": "BM create SUPER_ADMIN=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-005": {
+      "id": "SET-005",
+      "status": "Pass",
+      "actual": "matrix GET=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-006": {
+      "id": "SET-006",
+      "status": "Pass",
+      "actual": "status=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-007": {
+      "id": "SET-007",
+      "status": "Pass",
+      "actual": "fiscal lock JE blocked=true",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-008": {
+      "id": "SET-008",
+      "status": "Pass",
+      "actual": "status=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-009": {
+      "id": "SET-009",
+      "status": "Pass",
+      "actual": "expenseCat=201 pettyCat=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "SET-010": {
+      "id": "SET-010",
+      "status": "Pass",
+      "actual": "fxCount=12",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-001": {
+      "id": "X-001",
+      "status": "Pass",
+      "actual": "unauth=401 counsellorForbidden=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-002": {
+      "id": "X-002",
+      "status": "Pass",
+      "actual": "audits=906",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-003": {
+      "id": "X-003",
+      "status": "Pass",
+      "actual": "students paged",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-004": {
+      "id": "X-004",
+      "status": "Pass",
+      "actual": "journals list",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-005": {
+      "id": "X-005",
+      "status": "Pass",
+      "actual": "audit paged",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-006": {
+      "id": "X-006",
+      "status": "Pass",
+      "actual": "health={\"status\":\"ok\",\"service\":\"d-educationist-accounting-api\",\"milestone\":\"M15\",\"database\":\"up\",\"note\":\"API process is running and PostgreSQL responded.\"}",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-007": {
+      "id": "X-007",
+      "status": "DeferredUI",
+      "actual": "Error toast UX deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-008": {
+      "id": "X-008",
+      "status": "DeferredUI",
+      "actual": "403 toast UX deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-009": {
+      "id": "X-009",
+      "status": "DeferredUI",
+      "actual": "Desktop viewport deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-010": {
+      "id": "X-010",
+      "status": "DeferredUI",
+      "actual": "Mobile viewport deferred to UI phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-011": {
+      "id": "X-011",
+      "status": "DeferredUI",
+      "actual": "Client bundle secret scan deferred to build phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-012": {
+      "id": "X-012",
+      "status": "DeferredUI",
+      "actual": "HTTPS production proof deferred to verify-https.js / code-review phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-013": {
+      "id": "X-013",
+      "status": "DeferredUI",
+      "actual": "JWT secret env configurability deferred to code-review phase",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-014": {
+      "id": "X-014",
+      "status": "Pass",
+      "actual": "round2 used in GL/posting; balanced JE accepted",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-015": {
+      "id": "X-015",
+      "status": "Pass",
+      "actual": "delete posted invoice=409",
+      "defectId": null,
+      "evidence": null
+    },
+    "X-016": {
+      "id": "X-016",
+      "status": "Pass",
+      "actual": "fx rates endpoint=200",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-001": {
+      "id": "E2E-001",
+      "status": "Pass",
+      "actual": "student+invoice send+remittance/payment path exercised",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-002": {
+      "id": "E2E-002",
+      "status": "Pass",
+      "actual": "counsellor isolation catalog+403+students",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-003": {
+      "id": "E2E-003",
+      "status": "Pass",
+      "actual": "BM cross-branch=403",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-004": {
+      "id": "E2E-004",
+      "status": "Pass",
+      "actual": "invoiceLock=400 jeLock=400",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-005": {
+      "id": "E2E-005",
+      "status": "Pass",
+      "actual": "draft pending + TB from approved only (service filter)",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-006": {
+      "id": "E2E-006",
+      "status": "Pass",
+      "actual": "tax summary 2026-09",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-007": {
+      "id": "E2E-007",
+      "status": "Pass",
+      "actual": "filtered CSV",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-008": {
+      "id": "E2E-008",
+      "status": "Pass",
+      "actual": "audit trail populated",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-009": {
+      "id": "E2E-009",
+      "status": "Pass",
+      "actual": "payroll create=201 process=201 pay=201",
+      "defectId": null,
+      "evidence": null
+    },
+    "E2E-010": {
+      "id": "E2E-010",
+      "status": "Pass",
+      "actual": "invoice lifecycle status=PartiallyReceived",
+      "defectId": null,
+      "evidence": null
+    }
+  }
+}

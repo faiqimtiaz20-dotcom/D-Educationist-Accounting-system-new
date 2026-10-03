@@ -1,0 +1,47 @@
+[
+  {
+    "id": "AUTH-011",
+    "status": "Pass",
+    "actual": "{\"demoText\":false,\"demoButtons\":false,\"changeMe\":false}"
+  },
+  {
+    "id": "AUTH-011-dev-visible",
+    "status": "Pass",
+    "actual": "demo accounts visible in dev=true"
+  },
+  {
+    "id": "AUTH-008-probe",
+    "status": "Info",
+    "actual": "{\"titles\":[\"Search\",\"Sign out\"],\"headerText\":\"Ctrl+K\\nAll Branches\\n3\\nA\\n\\nAdmin User\\n\\nSuper Admin\"}"
+  },
+  {
+    "id": "AUTH-008",
+    "status": "Pass",
+    "actual": "click=clicked url=http://localhost:5173/login"
+  },
+  {
+    "id": "RBAC-008",
+    "status": "Pass",
+    "actual": "Branch | Counsellor | Counsellor Report Profit and Loss | Profit and loss by counsellor — income minus sub-agent cost and outstanding | Country-wise Report | Student pipeline and conversion by destination country | University-wise Report | Student pipeline and conversion by university"
+  },
+  {
+    "id": "RBAC-009",
+    "status": "Fail",
+    "actual": "D' Educationist Accounting System Dashboard Master Sheet Reports Ctrl+K Branch 3 F Fatima Noor Counsellor Trial balance report Trial Balance PDF Excel CSV Filters Reset Branch User / Staff All Date From Date To Category: Standard(live API) Total: PKR 0 Counsellors may only open Operations reports"
+  },
+  {
+    "id": "X-008",
+    "status": "Fail",
+    "actual": "D' Educationist Accounting System Dashboard Master Sheet Reports Ctrl+K Branch 3 F Fatima Noor Counsellor Trial balance report Trial Balance PDF Excel CSV Filters Reset Branch User / Staff All Date From Date To Category: Standard(live API) Total: PKR 0 Counsellors may only open Operations reports"
+  },
+  {
+    "id": "X-010",
+    "status": "Pass",
+    "actual": "{\"top\":403,\"bottom\":439,\"left\":48,\"right\":342,\"vw\":390,\"vh\":844,\"overflow\":0}"
+  },
+  {
+    "id": "X-007",
+    "status": "Info",
+    "actual": "Press space to play Try: Checking the network cables, modem, and router Reconnecting to Wi-Fi Running Windows Network Diagnostics ERR_INTERNET_DISCONNECTED"
+  }
+]
