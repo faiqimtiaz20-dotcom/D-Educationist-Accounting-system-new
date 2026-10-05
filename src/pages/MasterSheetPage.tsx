@@ -237,13 +237,14 @@ export default function MasterSheetPage() {
   const defaultBranchId = isSuperAdmin
     ? (branchOptions[0]?.id ?? '')
     : (currentUser?.branchId ?? '')
+  // Only lock consultant for Counsellor role; otherwise leave empty (optional)
   const defaultCounsellorId =
-    (isCounsellor && currentUser?.id) || consultantOptions[0]?.id || ''
+    isCounsellor && currentUser?.id ? currentUser.id : ''
 
   const openAdd = () => {
     setIsNew(true)
     const base = emptyStudent(defaultBranchId, defaultCounsellorId)
-    setForm(isCounsellor && currentUser ? { ...base, consultantId: currentUser.id } : base)
+    setForm(base)
     setSheetOpen(true)
   }
 
@@ -411,14 +412,6 @@ export default function MasterSheetPage() {
     const branchId = isSuperAdmin ? form.branchId : (currentUser?.branchId ?? form.branchId)
     const consultantId =
       isCounsellor && currentUser ? currentUser.id : form.consultantId
-    if (!consultantId) {
-      toast.error(
-        consultantOptions.length === 0
-          ? 'Create a Counsellor in Settings → Users first'
-          : 'Please select a consultant',
-      )
-      return
-    }
     try {
       if (api) {
         const uniId = resolveUniversityId(form.university)
@@ -687,24 +680,21 @@ export default function MasterSheetPage() {
                   />
                 ) : (
                   <Select
-                    value={form.consultantId || undefined}
-                    onValueChange={(v) => updateField('consultantId', v)}
+                    value={form.consultantId || '__none'}
+                    onValueChange={(v) =>
+                      updateField('consultantId', v === '__none' ? '' : v)
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select consultant" />
+                      <SelectValue placeholder="Select consultant (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {consultantOptions.length === 0 ? (
-                        <SelectItem value="__none" disabled>
-                          Create a Counsellor in Settings → Users
+                      <SelectItem value="__none">None</SelectItem>
+                      {consultantOptions.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
                         </SelectItem>
-                      ) : (
-                        consultantOptions.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name}
-                          </SelectItem>
-                        ))
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 )}

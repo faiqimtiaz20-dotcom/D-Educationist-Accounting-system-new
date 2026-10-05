@@ -36,6 +36,14 @@ export interface University {
   currency: Currency
 }
 
+/** Tenant-registered destination country (Settings master). */
+export interface TenantCountry {
+  id: string
+  name: string
+  isoCode?: string
+  isActive?: boolean
+}
+
 export interface Branch {
   id: string
   name: string

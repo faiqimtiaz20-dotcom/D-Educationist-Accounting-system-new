@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api-client'
-import type { Currency, SubAgent, University } from '@/types'
+import type { Currency, SubAgent, TenantCountry, University } from '@/types'
 
 export type ApiUniversity = {
   id: string
@@ -9,6 +9,13 @@ export type ApiUniversity = {
   countryCode: string | null
   defaultCommissionRate: string | number
   currencyCode: string
+  isActive: boolean
+}
+
+export type ApiTenantCountry = {
+  id: string
+  name: string
+  isoCode: string | null
   isActive: boolean
 }
 
@@ -74,6 +81,15 @@ export function mapApiUniversity(u: ApiUniversity): University {
   }
 }
 
+export function mapApiTenantCountry(c: ApiTenantCountry): TenantCountry {
+  return {
+    id: c.id,
+    name: c.name,
+    isoCode: c.isoCode ?? undefined,
+    isActive: c.isActive,
+  }
+}
+
 export function mapApiSubAgent(a: ApiSubAgent): SubAgent {
   return {
     id: a.id,
@@ -88,11 +104,17 @@ export function mapApiSubAgent(a: ApiSubAgent): SubAgent {
   }
 }
 
-export function universityToApiPayload(u: Omit<University, 'id' | 'universityNo'>) {
+export function universityToApiPayload(
+  u: Omit<University, 'id' | 'universityNo'>,
+  countries?: TenantCountry[],
+) {
+  const match = countries?.find(
+    (c) => c.name.toLowerCase() === u.country.trim().toLowerCase(),
+  )
   return {
     name: u.name,
     countryName: u.country,
-    countryCode: COUNTRY_TO_CODE[u.country] ?? undefined,
+    countryCode: match?.isoCode ?? COUNTRY_TO_CODE[u.country] ?? undefined,
     defaultCommissionRate: u.defaultCommissionRate,
     currencyCode: u.currency,
   }
@@ -102,19 +124,29 @@ export function listUniversities() {
   return apiFetch<ApiUniversity[]>('/universities')
 }
 
-export function createUniversity(body: Omit<University, 'id' | 'universityNo'>) {
+export function createUniversity(
+  body: Omit<University, 'id' | 'universityNo'>,
+  countries?: TenantCountry[],
+) {
   return apiFetch<ApiUniversity>('/universities', {
     method: 'POST',
-    body: JSON.stringify(universityToApiPayload(body)),
+    body: JSON.stringify(universityToApiPayload(body, countries)),
   })
 }
 
-export function updateUniversity(id: string, body: Partial<Omit<University, 'id'>>) {
+export function updateUniversity(
+  id: string,
+  body: Partial<Omit<University, 'id'>>,
+  countries?: TenantCountry[],
+) {
   const payload: Record<string, unknown> = {}
   if (body.name !== undefined) payload.name = body.name
   if (body.country !== undefined) {
     payload.countryName = body.country
-    payload.countryCode = COUNTRY_TO_CODE[body.country] ?? undefined
+    const match = countries?.find(
+      (c) => c.name.toLowerCase() === body.country!.trim().toLowerCase(),
+    )
+    payload.countryCode = match?.isoCode ?? COUNTRY_TO_CODE[body.country] ?? undefined
   }
   if (body.defaultCommissionRate !== undefined) {
     payload.defaultCommissionRate = body.defaultCommissionRate
@@ -128,6 +160,35 @@ export function updateUniversity(id: string, body: Partial<Omit<University, 'id'
 
 export function deleteUniversity(id: string) {
   return apiFetch<{ success: boolean }>(`/universities/${id}`, { method: 'DELETE' })
+}
+
+export function listCountries(includeInactive = false) {
+  const q = includeInactive ? '?includeInactive=true' : ''
+  return apiFetch<ApiTenantCountry[]>(`/countries${q}`)
+}
+
+export function createCountry(body: { name: string; isoCode?: string | null }) {
+  return apiFetch<ApiTenantCountry>('/countries', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: body.name,
+      isoCode: body.isoCode || undefined,
+    }),
+  })
+}
+
+export function updateCountry(
+  id: string,
+  body: { name?: string; isoCode?: string | null; isActive?: boolean },
+) {
+  return apiFetch<ApiTenantCountry>(`/countries/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteCountry(id: string) {
+  return apiFetch<{ success: boolean }>(`/countries/${id}`, { method: 'DELETE' })
 }
 
 export function listSubAgents() {

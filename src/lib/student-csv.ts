@@ -302,13 +302,13 @@ export function parseStudentCsv(text: string, ctx: StudentCsvContext): StudentCs
     const counsellorRaw = get(cells, 'counsellor')
     let consultantId = resolveCounsellorId(counsellorRaw, ctx.users)
     if (!consultantId) {
-      consultantId = ctx.defaultCounsellorId ?? null
+      consultantId = ctx.defaultCounsellorId ?? ''
     }
-    if (!consultantId) {
+    if (counsellorRaw && !consultantId) {
       rows.push({
         rowNumber,
         studentId,
-        error: counsellorRaw ? `Unknown counsellor "${counsellorRaw}"` : 'Counsellor is required',
+        error: `Unknown counsellor "${counsellorRaw}"`,
       })
       failed++
       continue

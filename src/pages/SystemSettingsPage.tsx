@@ -15,32 +15,42 @@ import { logAudit } from '@/lib/audit'
 import { isApiMode } from '@/lib/api-client'
 import { getSettings, patchSettings, uploadInvoiceLogo, deleteInvoiceLogo, fetchInvoiceLogoObjectUrl } from '@/lib/settings-api'
 import {
+  createCountry as apiCreateCountry,
   createPettyCashCategory as apiCreatePettyCat,
   createUniversity as apiCreateUniversity,
+  deleteCountry as apiDeleteCountry,
   deletePettyCashCategory as apiDeletePettyCat,
   deleteUniversity as apiDeleteUniversity,
+  listCountries,
   listPettyCashCategories,
   listUniversities,
+  mapApiTenantCountry,
   mapApiUniversity,
+  updateCountry as apiUpdateCountry,
   updatePettyCashCategory as apiUpdatePettyCat,
   updateUniversity as apiUpdateUniversity,
   type ApiCategory,
 } from '@/lib/masters-api'
-import type { Currency, University } from '@/types'
+import type { Currency, TenantCountry, University } from '@/types'
 import { DEFAULT_INVOICE_BRANDING } from '@/store/settings-store'
-import { FileImage, GraduationCap, Plus, Settings, Wallet } from 'lucide-react'
+import { FileImage, Globe2, GraduationCap, Plus, Settings, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
 
 const ALL_CURRENCIES: Currency[] = ['PKR', 'GBP', 'USD', 'CAD', 'AUD', 'EUR']
-const COUNTRIES = ['UK', 'USA', 'Canada', 'Australia', 'Germany', 'Ireland', 'New Zealand']
+const FALLBACK_COUNTRIES = ['UK', 'USA', 'Canada', 'Australia', 'Germany', 'Ireland', 'New Zealand']
 
-const emptyUniversity = (): Omit<University, 'id' | 'universityNo'> => ({
+const emptyUniversity = (defaultCountry = 'UK'): Omit<University, 'id' | 'universityNo'> => ({
   name: '',
-  country: 'UK',
+  country: defaultCountry,
   defaultCommissionRate: 15,
   currency: 'GBP',
+})
+
+const emptyCountry = (): { name: string; isoCode: string } => ({
+  name: '',
+  isoCode: '',
 })
 
 export function SystemSettingsPage() {
@@ -75,6 +85,11 @@ export function SystemSettingsPage() {
   const [editUniId, setEditUniId] = useState<string | null>(null)
   const [uniForm, setUniForm] = useState(emptyUniversity())
 
+  const [countryDialogOpen, setCountryDialogOpen] = useState(false)
+  const [isEditCountry, setIsEditCountry] = useState(false)
+  const [editCountryId, setEditCountryId] = useState<string | null>(null)
+  const [countryForm, setCountryForm] = useState(emptyCountry())
+
   const [catDialogOpen, setCatDialogOpen] = useState(false)
   const [isEditCat, setIsEditCat] = useState(false)
   const [editCatName, setEditCatName] = useState<string | null>(null)
@@ -83,6 +98,7 @@ export function SystemSettingsPage() {
   const api = isApiMode()
 
   const [apiUniversities, setApiUniversities] = useState<University[]>([])
+  const [apiCountries, setApiCountries] = useState<TenantCountry[]>([])
   const [apiPettyCats, setApiPettyCats] = useState<ApiCategory[]>([])
   const [mastersLoading, setMastersLoading] = useState(api)
 
@@ -90,12 +106,14 @@ export function SystemSettingsPage() {
     if (!api) return
     setMastersLoading(true)
     try {
-      const [unis, cats] = await Promise.all([
+      const [unis, cats, countries] = await Promise.all([
         listUniversities(),
         listPettyCashCategories(),
+        listCountries(),
       ])
       setApiUniversities(unis.map(mapApiUniversity))
       setApiPettyCats(cats)
+      setApiCountries(countries.map(mapApiTenantCountry))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load masters')
     } finally {
@@ -141,6 +159,10 @@ export function SystemSettingsPage() {
   }, [api, storeOrgName])
 
   const universities = api ? apiUniversities : storeUniversities
+  const countries = api
+    ? apiCountries
+    : FALLBACK_COUNTRIES.map((name, i) => ({ id: `local-${i}`, name, isActive: true }))
+  const countryNames = countries.map((c) => c.name)
   const pettyCashCategories = api
     ? apiPettyCats.map((c) => c.name)
     : storePettyCashCategories
@@ -156,7 +178,7 @@ export function SystemSettingsPage() {
   const openAddUniversity = () => {
     setIsEditUni(false)
     setEditUniId(null)
-    setUniForm(emptyUniversity())
+    setUniForm(emptyUniversity(countryNames[0] ?? 'UK'))
     setUniDialogOpen(true)
   }
 
@@ -192,13 +214,17 @@ export function SystemSettingsPage() {
       toast.error('University name is required')
       return
     }
+    if (!uniForm.country.trim()) {
+      toast.error('Select a registered country')
+      return
+    }
     try {
       if (api) {
         if (isEditUni && editUniId) {
-          await apiUpdateUniversity(editUniId, uniForm)
+          await apiUpdateUniversity(editUniId, uniForm, countries)
           toast.success('University updated')
         } else {
-          await apiCreateUniversity(uniForm)
+          await apiCreateUniversity(uniForm, countries)
           toast.success('University registered')
         }
         await loadMasters()
@@ -210,6 +236,61 @@ export function SystemSettingsPage() {
         toast.success('University registered')
       }
       setUniDialogOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Save failed')
+    }
+  }
+
+  const openAddCountry = () => {
+    setIsEditCountry(false)
+    setEditCountryId(null)
+    setCountryForm(emptyCountry())
+    setCountryDialogOpen(true)
+  }
+
+  const openEditCountry = (c: TenantCountry) => {
+    setIsEditCountry(true)
+    setEditCountryId(c.id)
+    setCountryForm({ name: c.name, isoCode: c.isoCode ?? '' })
+    setCountryDialogOpen(true)
+  }
+
+  const handleDeleteCountry = async (c: TenantCountry) => {
+    if (!confirm(`Remove country "${c.name}"?`)) return
+    try {
+      if (api) {
+        await apiDeleteCountry(c.id)
+        await loadMasters()
+      }
+      toast.success('Country removed')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
+  const handleSaveCountry = async () => {
+    if (!countryForm.name.trim()) {
+      toast.error('Country name is required')
+      return
+    }
+    if (!api) {
+      toast.error('Countries can only be managed in API mode')
+      return
+    }
+    try {
+      const body = {
+        name: countryForm.name.trim(),
+        isoCode: countryForm.isoCode.trim() || null,
+      }
+      if (isEditCountry && editCountryId) {
+        await apiUpdateCountry(editCountryId, body)
+        toast.success('Country updated')
+      } else {
+        await apiCreateCountry(body)
+        toast.success('Country registered')
+      }
+      await loadMasters()
+      setCountryDialogOpen(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Save failed')
     }
@@ -387,6 +468,7 @@ export function SystemSettingsPage() {
       <Tabs defaultValue="universities">
         <TabsList>
           <TabsTrigger value="universities" className="gap-2"><GraduationCap className="h-4 w-4" /> Registered Universities</TabsTrigger>
+          <TabsTrigger value="countries" className="gap-2"><Globe2 className="h-4 w-4" /> Countries</TabsTrigger>
           <TabsTrigger value="petty-cash" className="gap-2"><Wallet className="h-4 w-4" /> Petty Cash Categories</TabsTrigger>
           <TabsTrigger value="invoice" className="gap-2"><FileImage className="h-4 w-4" /> Invoice Branding</TabsTrigger>
           <TabsTrigger value="general" className="gap-2"><Settings className="h-4 w-4" /> General Settings</TabsTrigger>
@@ -437,6 +519,65 @@ export function SystemSettingsPage() {
                           <TableCell className="text-right font-medium">{uni.defaultCommissionRate}%</TableCell>
                           <TableCell>
                             <RowActions onEdit={() => openEditUniversity(uni)} onDelete={() => void handleDeleteUniversity(uni)} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="countries" className="mt-6 space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Registered Countries</CardTitle>
+                <CardDescription>
+                  Destination countries for this organisation only — used when registering universities and students
+                </CardDescription>
+              </div>
+              <Button onClick={openAddCountry} disabled={!api}>
+                <Plus className="mr-1 h-4 w-4" /> Add Country
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Country</TableHead>
+                      <TableHead>ISO Code</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mastersLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                          Loading…
+                        </TableCell>
+                      </TableRow>
+                    ) : countries.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                          No countries registered yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      countries.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">{c.name}</TableCell>
+                          <TableCell className="font-mono text-xs">{c.isoCode || '—'}</TableCell>
+                          <TableCell>
+                            {api ? (
+                              <RowActions
+                                onEdit={() => openEditCountry(c)}
+                                onDelete={() => void handleDeleteCountry(c)}
+                              />
+                            ) : null}
                           </TableCell>
                         </TableRow>
                       ))
@@ -732,12 +873,21 @@ export function SystemSettingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Country</Label>
-              <Select value={uniForm.country} onValueChange={(v) => setUniForm({ ...uniForm, country: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={uniForm.country || undefined}
+                onValueChange={(v) => setUniForm({ ...uniForm, country: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select registered country" /></SelectTrigger>
                 <SelectContent>
-                  {COUNTRIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {countryNames.length === 0 ? (
+                    <SelectItem value="__none" disabled>
+                      Add a country under Countries tab first
+                    </SelectItem>
+                  ) : (
+                    countryNames.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -784,6 +934,36 @@ export function SystemSettingsPage() {
             </div>
             <Button className="w-full" onClick={() => void handleSaveCategory()}>
               {isEditCat ? 'Update' : 'Add'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={countryDialogOpen} onOpenChange={setCountryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditCountry ? 'Edit Country' : 'Add Country'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Country Name</Label>
+              <Input
+                value={countryForm.name}
+                onChange={(e) => setCountryForm({ ...countryForm, name: e.target.value })}
+                placeholder="e.g. UK"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>ISO Code (optional)</Label>
+              <Input
+                value={countryForm.isoCode}
+                onChange={(e) => setCountryForm({ ...countryForm, isoCode: e.target.value.toUpperCase() })}
+                placeholder="e.g. GB"
+                maxLength={2}
+              />
+            </div>
+            <Button className="w-full" onClick={() => void handleSaveCountry()}>
+              {isEditCountry ? 'Update' : 'Add'}
             </Button>
           </div>
         </DialogContent>

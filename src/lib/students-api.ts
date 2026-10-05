@@ -9,7 +9,7 @@ export type ApiStudent = {
   contact: string | null
   email: string | null
   branchId: string
-  counsellorId: string
+  counsellorId: string | null
   country: string
   universityId: string
   course: string
@@ -22,7 +22,7 @@ export type ApiStudent = {
   expectedCommissionRate: string | number
   currencyCode: string
   university?: { id: string; name: string; countryName: string; currencyCode: string }
-  counsellor?: { id: string; fullName: string; email: string }
+  counsellor?: { id: string; fullName: string; email: string } | null
   branch?: { id: string; code: string; name: string }
   subAgent?: { id: string; name: string } | null
 }
@@ -34,7 +34,7 @@ export type StudentWritePayload = {
   contact?: string
   email?: string
   branchId: string
-  counsellorId: string
+  counsellorId?: string | null
   country: string
   universityId: string
   course: string
@@ -57,7 +57,7 @@ export function mapApiStudent(s: ApiStudent): Student {
     contact: s.contact ?? '',
     email: s.email ?? '',
     branchId: s.branchId,
-    consultantId: s.counsellorId,
+    consultantId: s.counsellorId ?? '',
     country: s.country,
     university: s.university?.name ?? s.universityId,
     course: s.course,
@@ -84,7 +84,7 @@ export function studentFormToApiPayload(
     contact: form.contact?.trim() || undefined,
     email: form.email?.trim() || undefined,
     branchId: form.branchId,
-    counsellorId: form.consultantId,
+    counsellorId: form.consultantId?.trim() ? form.consultantId : null,
     country: form.country,
     universityId,
     course: form.course.trim(),
