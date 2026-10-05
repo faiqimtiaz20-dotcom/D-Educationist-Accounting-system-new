@@ -169,7 +169,7 @@ interface DataState {
   updatePettyCash: (id: string, entry: Partial<PettyCashEntry>) => void
   deletePettyCash: (id: string) => void
 
-  addExpense: (expense: Omit<Expense, 'id' | 'total' | 'approvalStatus'> & { approvalStatus?: ApprovalStatus }, requestedById: string, requestedByName: string) => void
+  addExpense: (expense: Omit<Expense, 'id' | 'expenseNo' | 'total' | 'approvalStatus'> & { expenseNo?: string; approvalStatus?: ApprovalStatus }, requestedById: string, requestedByName: string) => void
   updateExpense: (id: string, expense: Partial<Expense>) => void
   deleteExpense: (id: string) => void
 
@@ -931,8 +931,20 @@ export const useDataStore = create<DataState>()(
         const totalNet = lines.reduce((sum, l) => sum + l.netSalary, 0)
         const totalReimbursements = lines.reduce((sum, l) => sum + l.reimbursements, 0)
 
+        const branchCode =
+          s.branches.find((b) => b.id === scopeBranch)?.code?.toUpperCase() ?? 'GEN'
+        const year = new Date().getFullYear()
+        const runPrefix = `PR-${branchCode}-${year}-`
+        const runSeq =
+          s.payrollRuns
+            .filter((r) => r.runNo?.startsWith(runPrefix))
+            .map((r) => parseInt(r.runNo.slice(runPrefix.length), 10))
+            .filter((n) => !Number.isNaN(n))
+            .reduce((m, n) => Math.max(m, n), 0) + 1
+
         const run: PayrollRun = {
           id: runId,
+          runNo: `${runPrefix}${String(runSeq).padStart(3, '0')}`,
           period,
           branchId: scopeBranch,
           status: 'Processed',
@@ -1009,10 +1021,15 @@ export const useDataStore = create<DataState>()(
                 allowances: row.allowances,
                 isActive: true,
               })
-              employee = { ...built, id: nextId('pe', payrollEmployees) }
-              // Prefer uploaded tax/net figures over FBR recalculation for the register snapshot
+              const empSeq =
+                payrollEmployees
+                  .map((e) => parseInt((e.employeeNo ?? '').replace(/^EMP-/i, ''), 10))
+                  .filter((n) => !Number.isNaN(n))
+                  .reduce((m, n) => Math.max(m, n), 0) + 1
               employee = {
-                ...employee,
+                ...built,
+                id: nextId('pe', payrollEmployees),
+                employeeNo: `EMP-${String(empSeq).padStart(3, '0')}`,
                 salaryTax: row.salaryTax,
                 netSalary: row.netSalary,
               }
@@ -1037,6 +1054,19 @@ export const useDataStore = create<DataState>()(
 
           const run: PayrollRun = {
             id: runId,
+            runNo: (() => {
+              const branchCode =
+                s.branches.find((b) => b.id === group.branchId)?.code?.toUpperCase() ?? 'GEN'
+              const year = new Date().getFullYear()
+              const runPrefix = `PR-${branchCode}-${year}-`
+              const runSeq =
+                payrollRuns
+                  .filter((r) => r.runNo?.startsWith(runPrefix))
+                  .map((r) => parseInt(r.runNo.slice(runPrefix.length), 10))
+                  .filter((n) => !Number.isNaN(n))
+                  .reduce((m, n) => Math.max(m, n), 0) + 1
+              return `${runPrefix}${String(runSeq).padStart(3, '0')}`
+            })(),
             period,
             branchId: group.branchId,
             status: 'Processed',
