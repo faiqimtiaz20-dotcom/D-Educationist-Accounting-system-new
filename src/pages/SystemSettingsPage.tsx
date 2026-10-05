@@ -159,9 +159,13 @@ export function SystemSettingsPage() {
   }, [api, storeOrgName])
 
   const universities = api ? apiUniversities : storeUniversities
-  const countries = api
+  const countries: TenantCountry[] = api
     ? apiCountries
-    : FALLBACK_COUNTRIES.map((name, i) => ({ id: `local-${i}`, name, isActive: true }))
+    : FALLBACK_COUNTRIES.map((name, i) => ({
+        id: `local-${i}`,
+        name,
+        isActive: true,
+      }))
   const countryNames = countries.map((c) => c.name)
   const pettyCashCategories = api
     ? apiPettyCats.map((c) => c.name)
