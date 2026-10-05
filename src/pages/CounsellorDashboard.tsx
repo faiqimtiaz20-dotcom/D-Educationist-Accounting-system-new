@@ -1,4 +1,5 @@
 import { MetricCard } from '@/components/shared/MetricCard'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -109,6 +110,10 @@ export default function CounsellorDashboard() {
     applicationStatus: s.applicationStatus,
   }))
 
+  if (api && loading) {
+    return <PageDataSkeleton metrics={4} rows={5} />
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-0 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] shadow-md">
@@ -118,7 +123,7 @@ export default function CounsellorDashboard() {
             <h1 className="mt-1 text-2xl font-bold tracking-tight">My Students Dashboard</h1>
             <p className="mt-2 max-w-xl text-sm text-[var(--sidebar-foreground)]/70">
               {api
-                ? `Your pipeline from PostgreSQL${loading ? ' (loading…)' : ''}`
+                ? 'Your pipeline from PostgreSQL'
                 : "Track your students' applications, intakes, and destinations."}
             </p>
           </div>

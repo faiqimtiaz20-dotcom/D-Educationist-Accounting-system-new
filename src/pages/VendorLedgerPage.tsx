@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -7,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
-import { isApiMode } from '@/lib/api-client'
 import { formatCurrency } from '@/lib/calculations'
 import { getVendorLedger, mapPartyLedgerEntries } from '@/lib/journals-api'
 import { useDataStore } from '@/store/data-store'
@@ -33,8 +33,7 @@ function buildVendorLedger(vendorExpenses: Expense[]): LedgerEntry[] {
 }
 
 export default function VendorLedgerPage() {
-  const api = isApiMode()
-  const { vendors: apiVendors } = useCashApiSync()
+  const { vendors: apiVendors, api, loading } = useCashApiSync()
   const expenses = useDataStore((s) => s.expenses)
   const branchFiltered = useBranchFilter(expenses)
   const localVendors = useMemo(
@@ -117,6 +116,8 @@ export default function VendorLedgerPage() {
     { key: 'credit', header: 'Paid (Credit)', className: 'text-right font-mono', cell: (r) => r.credit > 0 ? formatCurrency(r.credit) : '—' },
     { key: 'balance', header: 'Balance', className: 'text-right font-mono font-medium', cell: (r) => formatCurrency(r.balance) },
   ], [])
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

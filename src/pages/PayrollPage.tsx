@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
@@ -499,6 +500,8 @@ export default function PayrollPage() {
     : []
 
   const computedPreview = computeSalary(empForm.basicSalary, empForm.allowances)
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

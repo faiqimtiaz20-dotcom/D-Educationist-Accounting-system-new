@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { isApiMode } from '@/lib/api-client'
 import { auditLogs as initialAuditLogs } from '@/data/documents'
 import type { AuditLog } from '@/types'
 
@@ -17,12 +18,16 @@ function nextAuditId(existing: AuditLog[]) {
 export const useAuditStore = create<AuditState>()(
   persist(
     (set) => ({
-      logs: initialAuditLogs,
+      logs: isApiMode() ? [] : initialAuditLogs,
       append: (entry) =>
         set((s) => ({
           logs: [{ ...entry, id: nextAuditId(s.logs) }, ...s.logs].slice(0, 500),
         })),
     }),
-    { name: 'saa-audit-store' }
-  )
+    {
+      name: 'saa-audit-store',
+      merge: (persisted, current) => (isApiMode() ? current : { ...current, ...(persisted as object) }),
+      partialize: (state) => (isApiMode() ? ({} as Partial<AuditState>) : state),
+    },
+  ),
 )

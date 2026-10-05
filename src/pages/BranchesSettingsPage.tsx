@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { RowActions } from '@/components/shared/RowActions'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Badge } from '@/components/ui/badge'
@@ -180,7 +181,7 @@ export function BranchesSettingsPage() {
         onAction={canManage ? openAdd : undefined}
       />
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading branches…</p>
+        <PageDataSkeleton metrics={0} />
       ) : (
         <DataTable
           data={tableData}

@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { getUserName } from '@/data/users'
@@ -6,7 +7,7 @@ import { isApiMode } from '@/lib/api-client'
 import { listAuditLogsPage } from '@/lib/operations-api'
 import { useAuditStore } from '@/store/audit-store'
 import type { AuditLog } from '@/types'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -98,9 +99,7 @@ export default function AuditTrailPage() {
       <PageHeader title="Audit Trail" subtitle="Immutable activity log across modules" />
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading audit logs…
-        </div>
+        <PageDataSkeleton metrics={0} />
       ) : (
         <>
           <DataTable

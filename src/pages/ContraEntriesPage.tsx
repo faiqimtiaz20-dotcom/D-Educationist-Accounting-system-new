@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,7 +33,7 @@ const TYPE_TO_API: Record<ContraEntry['type'], 'CashBank' | 'BankBank' | 'CashCa
 }
 
 export default function ContraEntriesPage() {
-  const { api, reload, contra, banks } = useCashApiSync()
+  const { api, reload, contra, banks, loading } = useCashApiSync()
   const branches = useDataStore((s) => s.branches)
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)
   const source = api ? contra : mockContra
@@ -113,6 +114,8 @@ export default function ContraEntriesPage() {
       }
     })()
   }
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

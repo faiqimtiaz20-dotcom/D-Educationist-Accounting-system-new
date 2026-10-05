@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { isApiMode } from '@/lib/api-client'
 import { students as initialStudents } from '@/data/students'
 import { invoices as initialInvoices } from '@/data/invoices'
 import { otherInvoices as initialOtherInvoices } from '@/data/otherInvoices'
@@ -64,6 +65,11 @@ function nextId(prefix: string, existing: { id: string }[]) {
     .filter((n) => !Number.isNaN(n))
   const next = nums.length ? Math.max(...nums) + 1 : 1
   return `${prefix}${next}`
+}
+
+/** Demo seed only in local/mock mode — API mode starts empty to avoid hardcoded flash. */
+function seed<T>(demo: T[]): T[] {
+  return isApiMode() ? [] : demo
 }
 
 function invoiceTotal(invoice: Invoice) {
@@ -163,7 +169,7 @@ interface DataState {
   updatePettyCash: (id: string, entry: Partial<PettyCashEntry>) => void
   deletePettyCash: (id: string) => void
 
-  addExpense: (expense: Omit<Expense, 'id' | 'expenseNo' | 'total' | 'approvalStatus'> & { approvalStatus?: ApprovalStatus; expenseNo?: string }, requestedById: string, requestedByName: string) => void
+  addExpense: (expense: Omit<Expense, 'id' | 'total' | 'approvalStatus'> & { approvalStatus?: ApprovalStatus }, requestedById: string, requestedByName: string) => void
   updateExpense: (id: string, expense: Partial<Expense>) => void
   deleteExpense: (id: string) => void
 
@@ -223,26 +229,26 @@ interface DataState {
 export const useDataStore = create<DataState>()(
   persist(
     (set, get) => ({
-      students: initialStudents,
-      invoices: initialInvoices,
-      otherInvoices: initialOtherInvoices,
-      receivables: initialReceivables,
-      receivableAllocations: initialAllocations,
-      pettyCash: initialPettyCash,
-      expenses: initialExpenses,
-      approvals: initialApprovals,
-      universities: initialUniversities,
-      branches: initialBranches,
-      users: initialUsers,
-      journalEntries: initialJournalEntries,
+      students: seed(initialStudents),
+      invoices: seed(initialInvoices),
+      otherInvoices: seed(initialOtherInvoices),
+      receivables: seed(initialReceivables),
+      receivableAllocations: seed(initialAllocations),
+      pettyCash: seed(initialPettyCash),
+      expenses: seed(initialExpenses),
+      approvals: seed(initialApprovals),
+      universities: seed(initialUniversities),
+      branches: seed(initialBranches),
+      users: seed(initialUsers),
+      journalEntries: seed(initialJournalEntries),
       glReconciled: false,
-      payrollEmployees: initialPayrollEmployees,
-      payrollRuns: initialPayrollRuns,
-      payrollLines: initialPayrollLines,
-      reimbursements: initialReimbursements,
-      subAgents: initialSubAgents,
-      subAgentCommissions: initialSubAgentCommissions,
-      subAgentPayments: initialSubAgentPayments,
+      payrollEmployees: seed(initialPayrollEmployees),
+      payrollRuns: seed(initialPayrollRuns),
+      payrollLines: seed(initialPayrollLines),
+      reimbursements: seed(initialReimbursements),
+      subAgents: seed(initialSubAgents),
+      subAgentCommissions: seed(initialSubAgentCommissions),
+      subAgentPayments: seed(initialSubAgentPayments),
 
       getChartOfAccounts: () => computeChartOfAccounts(get().journalEntries),
 
@@ -925,20 +931,8 @@ export const useDataStore = create<DataState>()(
         const totalNet = lines.reduce((sum, l) => sum + l.netSalary, 0)
         const totalReimbursements = lines.reduce((sum, l) => sum + l.reimbursements, 0)
 
-        const branchCode =
-          s.branches.find((b) => b.id === scopeBranch)?.code?.toUpperCase() ?? 'GEN'
-        const year = new Date().getFullYear()
-        const runPrefix = `PR-${branchCode}-${year}-`
-        const runSeq =
-          s.payrollRuns
-            .filter((r) => r.runNo?.startsWith(runPrefix))
-            .map((r) => parseInt(r.runNo.slice(runPrefix.length), 10))
-            .filter((n) => !Number.isNaN(n))
-            .reduce((m, n) => Math.max(m, n), 0) + 1
-
         const run: PayrollRun = {
           id: runId,
-          runNo: `${runPrefix}${String(runSeq).padStart(3, '0')}`,
           period,
           branchId: scopeBranch,
           status: 'Processed',
@@ -1015,17 +1009,10 @@ export const useDataStore = create<DataState>()(
                 allowances: row.allowances,
                 isActive: true,
               })
-              const empSeq =
-                payrollEmployees
-                  .map((e) => parseInt((e.employeeNo ?? '').replace(/^EMP-/i, ''), 10))
-                  .filter((n) => !Number.isNaN(n))
-                  .reduce((m, n) => Math.max(m, n), 0) + 1
-              const code = row.employeeCode?.trim()
+              employee = { ...built, id: nextId('pe', payrollEmployees) }
               // Prefer uploaded tax/net figures over FBR recalculation for the register snapshot
               employee = {
-                ...built,
-                id: nextId('pe', payrollEmployees),
-                employeeNo: code || `EMP-${String(empSeq).padStart(3, '0')}`,
+                ...employee,
                 salaryTax: row.salaryTax,
                 netSalary: row.netSalary,
               }
@@ -1048,20 +1035,8 @@ export const useDataStore = create<DataState>()(
             })
           }
 
-          const branchCode =
-            s.branches.find((b) => b.id === group.branchId)?.code?.toUpperCase() ?? 'GEN'
-          const year = new Date().getFullYear()
-          const runPrefix = `PR-${branchCode}-${year}-`
-          const runSeq =
-            payrollRuns
-              .filter((r) => r.runNo?.startsWith(runPrefix))
-              .map((r) => parseInt(r.runNo.slice(runPrefix.length), 10))
-              .filter((n) => !Number.isNaN(n))
-              .reduce((m, n) => Math.max(m, n), 0) + 1
-
           const run: PayrollRun = {
             id: runId,
-            runNo: `${runPrefix}${String(runSeq).padStart(3, '0')}`,
             period,
             branchId: group.branchId,
             status: 'Processed',
@@ -1198,6 +1173,8 @@ export const useDataStore = create<DataState>()(
     {
       name: 'saa-data-store',
       merge: (persisted, current) => {
+        // API mode: never rehydrate demo/local rows — sync hooks own the data
+        if (isApiMode()) return current
         const p = (persisted ?? {}) as Partial<DataState>
         return {
           ...current,
@@ -1221,15 +1198,18 @@ export const useDataStore = create<DataState>()(
         }
       },
       onRehydrateStorage: () => (state: DataState | undefined) => {
-        if (state) {
-          state.invoices = normalizeInvoices(state.invoices as unknown as unknown[])
-          state.subAgents = state.subAgents.map((a, i) => ({
-            ...a,
-            subAgentNo: a.subAgentNo || `SA-${String(i + 1).padStart(3, '0')}`,
-          }))
-          state.reconcileGlPostings()
-        }
+        if (!state || isApiMode()) return
+        state.invoices = normalizeInvoices(state.invoices as unknown as unknown[])
+        state.subAgents = state.subAgents.map((a, i) => ({
+          ...a,
+          subAgentNo: a.subAgentNo || `SA-${String(i + 1).padStart(3, '0')}`,
+        }))
+        state.reconcileGlPostings()
       },
+      partialize: (state) =>
+        isApiMode()
+          ? ({} as Partial<DataState>)
+          : state,
     }
   )
 )

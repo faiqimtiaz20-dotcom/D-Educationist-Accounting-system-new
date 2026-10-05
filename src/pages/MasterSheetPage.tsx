@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
 import { StatusPill } from '@/components/shared/StatusPill'
@@ -13,6 +14,7 @@ import { useCurrentUser } from '@/hooks/useAuth'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { isApiMode } from '@/lib/api-client'
 import { formatCurrency, netFee } from '@/lib/calculations'
+import { toFrontendRole } from '@/lib/api-auth-types'
 import { canViewAllBranches } from '@/lib/permissions'
 import { getUserName } from '@/lib/org'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
@@ -37,7 +39,7 @@ import {
   updateStudent as apiUpdateStudent,
 } from '@/lib/students-api'
 import { useDataStore } from '@/store/data-store'
-import type { ApplicationStatus, Branch, Student, SubAgent, University, User, UserRole } from '@/types'
+import type { ApplicationStatus, Branch, Student, SubAgent, University, User } from '@/types'
 import { ChevronLeft, ChevronRight, Download, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -65,7 +67,7 @@ function mapApiUserRow(u: {
     id: u.id,
     name: u.fullName,
     email: u.email,
-    role: u.role.name as UserRole,
+    role: toFrontendRole(u.role.name),
     branchId: u.branchId,
   }
 }
@@ -128,9 +130,31 @@ export default function MasterSheetPage() {
   const branches = api ? apiBranches : storeBranches
   const universities = api ? apiUniversities : storeUniversities
   const subAgents = api ? apiSubAgents : storeSubAgents
-  const counsellorUsers = api
-    ? apiUsers.filter((u) => u.role === 'Counsellor')
-    : mockUsers.filter((u) => u.role === 'Counsellor')
+  const allUsers = api ? apiUsers : mockUsers
+  const counsellorUsers = useMemo(
+    () => allUsers.filter((u) => u.role === 'Counsellor'),
+    [allUsers],
+  )
+  /** Prefer Counsellors; new tenants with only Tenant Admin still get a named option */
+  const consultantOptions = useMemo(() => {
+    if (counsellorUsers.length > 0) return counsellorUsers
+    const bootstrap = allUsers.filter(
+      (u) => u.role === 'Super Admin' || u.role === 'Branch Manager',
+    )
+    if (bootstrap.length > 0) return bootstrap
+    if (currentUser) {
+      return [
+        {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          role: currentUser.role,
+          branchId: currentUser.branchId,
+        } satisfies User,
+      ]
+    }
+    return []
+  }, [counsellorUsers, allUsers, currentUser])
 
   const load = useCallback(async () => {
     if (!api) return
@@ -170,7 +194,11 @@ export default function MasterSheetPage() {
     return branchStudents.filter((s) => s.consultantId === currentUser.id)
   }, [branchStudents, isCounsellor, currentUser])
 
-  const branchOptions = branches.filter((b) => !b.isHeadOffice)
+  const branchOptions = useMemo(() => {
+    const operating = branches.filter((b) => !b.isHeadOffice)
+    // New tenants may only have HO until operating branches are added
+    return operating.length > 0 ? operating : branches
+  }, [branches])
 
   const filtered = useMemo(() => {
     if (activeStatus === 'all') return scopedStudents
@@ -210,10 +238,7 @@ export default function MasterSheetPage() {
     ? (branchOptions[0]?.id ?? '')
     : (currentUser?.branchId ?? '')
   const defaultCounsellorId =
-    (isCounsellor && currentUser?.id) ||
-    counsellorUsers[0]?.id ||
-    currentUser?.id ||
-    ''
+    (isCounsellor && currentUser?.id) || consultantOptions[0]?.id || ''
 
   const openAdd = () => {
     setIsNew(true)
@@ -386,7 +411,14 @@ export default function MasterSheetPage() {
     const branchId = isSuperAdmin ? form.branchId : (currentUser?.branchId ?? form.branchId)
     const consultantId =
       isCounsellor && currentUser ? currentUser.id : form.consultantId
-
+    if (!consultantId) {
+      toast.error(
+        consultantOptions.length === 0
+          ? 'Create a Counsellor in Settings → Users first'
+          : 'Please select a consultant',
+      )
+      return
+    }
     try {
       if (api) {
         const uniId = resolveUniversityId(form.university)
@@ -424,9 +456,14 @@ export default function MasterSheetPage() {
   }
 
   const counsellorDisplayName = (id: string) => {
-    const fromApi = counsellorUsers.find((u) => u.id === id)?.name
-    if (fromApi) return fromApi
-    return getUserName(id)
+    if (!id) return 'Select consultant'
+    const fromOptions = consultantOptions.find((u) => u.id === id)?.name
+    if (fromOptions) return fromOptions
+    const fromUsers = allUsers.find((u) => u.id === id)?.name
+    if (fromUsers) return fromUsers
+    if (currentUser?.id === id) return currentUser.name
+    const fromStore = getUserName(id)
+    return fromStore !== id ? fromStore : 'Select consultant'
   }
 
   const columns: Column<Student>[] = [
@@ -487,14 +524,16 @@ export default function MasterSheetPage() {
 
   return (
     <div>
+      {api && loading ? (
+        <PageDataSkeleton metrics={0} />
+      ) : (
+      <>
       <PageHeader
         title="Master Sheet"
         subtitle={
-          loading
-            ? 'Loading students…'
-            : api
-              ? 'Student records from API — single source of truth for invoices and receivables'
-              : 'Student records — single source of truth for invoices and receivables'
+          api
+            ? 'Student records from API — single source of truth for invoices and receivables'
+            : 'Student records — single source of truth for invoices and receivables'
         }
         actionLabel="Add Student"
         onAction={openAdd}
@@ -648,18 +687,24 @@ export default function MasterSheetPage() {
                   />
                 ) : (
                   <Select
-                    value={form.consultantId}
+                    value={form.consultantId || undefined}
                     onValueChange={(v) => updateField('consultantId', v)}
                   >
                     <SelectTrigger>
-                      <SelectValue>{counsellorDisplayName(form.consultantId)}</SelectValue>
+                      <SelectValue placeholder="Select consultant" />
                     </SelectTrigger>
                     <SelectContent>
-                      {counsellorUsers.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
+                      {consultantOptions.length === 0 ? (
+                        <SelectItem value="__none" disabled>
+                          Create a Counsellor in Settings → Users
                         </SelectItem>
-                      ))}
+                      ) : (
+                        consultantOptions.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}
@@ -791,6 +836,8 @@ export default function MasterSheetPage() {
           </div>
         </SheetContent>
       </Sheet>
+      </>
+      )}
     </div>
   )
 }

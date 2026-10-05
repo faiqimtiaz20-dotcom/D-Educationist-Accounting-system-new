@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
 import { StatusPill } from '@/components/shared/StatusPill'
@@ -45,7 +46,7 @@ const emptyReceipt = {
 }
 
 export default function ReceivablesPage() {
-  const { api, reload, banks } = useRevenueApiSync()
+  const { api, reload, banks, loading } = useRevenueApiSync()
   const invoices = useDataStore((s) => s.invoices)
   const students = useDataStore((s) => s.students)
   const receivables = useDataStore((s) => s.receivables)
@@ -273,6 +274,8 @@ export default function ReceivablesPage() {
       cell: (row) => <RowActions onEdit={() => openEdit(row)} onDelete={() => handleDelete(row)} />,
     },
   ]
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

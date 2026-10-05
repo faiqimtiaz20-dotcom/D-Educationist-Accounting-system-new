@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusPill } from '@/components/shared/StatusPill'
@@ -21,7 +22,7 @@ import { Building2, CreditCard, FileCheck, Landmark } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function BankCashPage() {
-  const { api, reload, banks, transactions, cheques } = useCashApiSync()
+  const { api, reload, banks, transactions, cheques, loading } = useCashApiSync()
   const bankAccounts = api ? banks : mockAccounts
   const bankTransactions = api ? transactions : mockTxns
   const chequeList = api ? cheques : mockCheques
@@ -170,6 +171,8 @@ export default function BankCashPage() {
     () => filteredTransactions.filter((t) => t.reconciliationStatus === 'Matched').length,
     [filteredTransactions]
   )
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

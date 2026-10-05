@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
@@ -50,7 +51,7 @@ const emptyForm = {
 export default function ExpensesPage() {
   const user = useCurrentUser()
   const { canWrite } = useModulePermission('Expenses & Petty Cash')
-  const { api, reload, expenseCategories, vendors, banks } = useCashApiSync()
+  const { api, reload, expenseCategories, vendors, banks, loading } = useCashApiSync()
   const expenses = useDataStore((s) => s.expenses)
   const branches = useDataStore((s) => s.branches)
   const addExpense = useDataStore((s) => s.addExpense)
@@ -304,6 +305,8 @@ export default function ExpensesPage() {
         ) : null,
     },
   ]
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

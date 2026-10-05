@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -214,10 +215,7 @@ export default function CrmTenantsPage() {
       </p>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading tenants…
-        </div>
+        <PageDataSkeleton metrics={0} />
       ) : (
         <DataTable
           columns={columns}

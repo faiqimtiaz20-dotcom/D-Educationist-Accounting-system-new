@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
@@ -36,7 +37,7 @@ const emptyForm = {
 }
 
 export default function PettyCashPage() {
-  const { api, reload, pettyCategories } = useCashApiSync()
+  const { api, reload, pettyCategories, loading } = useCashApiSync()
   const pettyCash = useDataStore((s) => s.pettyCash)
   const branches = useDataStore((s) => s.branches)
   const addPettyCash = useDataStore((s) => s.addPettyCash)
@@ -209,6 +210,8 @@ export default function PettyCashPage() {
         api ? null : <RowActions onEdit={() => openEdit(row)} onDelete={() => void handleDelete(row)} />,
     },
   ]
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

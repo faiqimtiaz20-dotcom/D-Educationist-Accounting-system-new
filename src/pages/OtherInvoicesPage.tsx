@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Button } from '@/components/ui/button'
@@ -71,7 +72,7 @@ export default function OtherInvoicesPage() {
   const currentUser = useCurrentUser()
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
-  const { api, reload } = useRevenueApiSync()
+  const { api, reload, loading } = useRevenueApiSync()
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)
   const otherInvoices = useDataStore((s) => s.otherInvoices)
   const addOtherInvoice = useDataStore((s) => s.addOtherInvoice)
@@ -347,6 +348,8 @@ export default function OtherInvoicesPage() {
   ]
 
   const previewTotal = previewInvoice ? getOtherInvoiceTotal(previewInvoice) : 0
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

@@ -1,6 +1,7 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MetricCard } from '@/components/shared/MetricCard'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -96,7 +97,7 @@ export default function StudentLedgerPage() {
   ], [currency])
 
   if (api && !studentsLoaded) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+    return <PageDataSkeleton metrics={3} rows={5} />
   }
 
   return (

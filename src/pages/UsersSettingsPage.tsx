@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { RowActions } from '@/components/shared/RowActions'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Badge } from '@/components/ui/badge'
@@ -387,7 +388,7 @@ export function UsersSettingsPage() {
       />
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading users…</p>
+        <PageDataSkeleton metrics={0} />
       ) : (
         <DataTable
           data={branchFilteredUsers}
@@ -560,9 +561,10 @@ export function UsersSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {branches
-                        .filter((b) => !b.isHeadOffice)
-                        .map((b) => (
+                      {(branches.some((b) => !b.isHeadOffice)
+                        ? branches.filter((b) => !b.isHeadOffice)
+                        : branches
+                      ).map((b) => (
                           <SelectItem key={b.id} value={b.id}>
                             {b.name}
                           </SelectItem>

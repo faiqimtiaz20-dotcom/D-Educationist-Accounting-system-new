@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/shared/PageHeader'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { MetricCard } from '@/components/shared/MetricCard'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEffectiveBranchId } from '@/hooks/useAuth'
@@ -11,7 +12,7 @@ import {
   type ApiReportPayload,
   type ReportRow,
 } from '@/lib/reports-api'
-import { FileSpreadsheet, FileText, Loader2, Printer } from 'lucide-react'
+import { FileSpreadsheet, FileText, Printer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -130,9 +131,7 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
       </PageHeader>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading report…
-        </div>
+        <PageDataSkeleton metrics={4} />
       ) : error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : data ? (

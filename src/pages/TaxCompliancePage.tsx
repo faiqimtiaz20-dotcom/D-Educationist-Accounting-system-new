@@ -1,5 +1,6 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { MetricCard } from '@/components/shared/MetricCard'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { taxRecords as mockTaxRecords } from '@/data'
 import { getBranchName } from '@/lib/org'
@@ -68,7 +69,7 @@ export default function TaxCompliancePage() {
     }
   }, [api, period])
 
-  const sourceRecords = api && apiRecords ? apiRecords : mockTaxRecords
+  const sourceRecords = api ? (apiRecords ?? []) : mockTaxRecords
   const filtered = useBranchFilter(sourceRecords)
 
   const mockSummary = useMemo(() => {
@@ -132,13 +133,17 @@ export default function TaxCompliancePage() {
 
   const pl = metrics.periodLabel
 
+  if (api && loading) {
+    return <PageDataSkeleton metrics={4} />
+  }
+
   return (
     <div>
       <PageHeader
         title="Tax Compliance"
         subtitle={
           api
-            ? `Unified tax dashboard — live from remittances, payables, expenses & payroll${loading ? ' (loading…)' : ''}`
+            ? 'Unified tax dashboard — live from remittances, payables, expenses & payroll'
             : 'Unified tax dashboard — WHT, GST, SRB-SST, and salary tax'
         }
       />

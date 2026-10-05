@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -32,7 +33,7 @@ const emptyPayment = {
 }
 
 export default function SubAgentPaymentsPage() {
-  const { api, reload, banks } = usePayablesApiSync()
+  const { api, reload, banks, loading } = usePayablesApiSync()
   const subAgentCommissions = useDataStore((s) => s.subAgentCommissions)
   const subAgentPayments = useDataStore((s) => s.subAgentPayments)
   const subAgents = useDataStore((s) => s.subAgents)
@@ -259,6 +260,8 @@ export default function SubAgentPaymentsPage() {
   const student = commission ? getStudent(commission.studentId) : undefined
   const invoice = commission ? invoices.find((i) => i.id === commission.invoiceId) : undefined
   const bank = voucher ? bankAccounts.find((b) => b.id === voucher.bankAccountId) : undefined
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

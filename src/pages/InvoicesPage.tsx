@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { InvoicePaymentPanel } from '@/components/shared/InvoicePaymentPanel'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusPill } from '@/components/shared/StatusPill'
@@ -86,7 +87,7 @@ export default function InvoicesPage() {
   const branding = useSettingsStore((s) => s.invoiceBranding)
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
-  const { api, reload } = useRevenueApiSync()
+  const { api, reload, loading } = useRevenueApiSync()
   const invoices = useDataStore((s) => s.invoices)
   const receivables = useDataStore((s) => s.receivables)
   const students = useDataStore((s) => s.students)
@@ -599,6 +600,8 @@ export default function InvoicesPage() {
 
   const previewPaid = previewInvoice ? getInvoiceAmountPaid(previewInvoice.id) : 0
   const previewTotal = previewInvoice ? getInvoiceTotal(previewInvoice) : 0
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

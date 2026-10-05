@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +19,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 export default function AllocationPage() {
-  const { api, reload, banks } = useRevenueApiSync()
+  const { api, reload, banks, loading } = useRevenueApiSync()
   const receivables = useDataStore((s) => s.receivables)
   const invoices = useDataStore((s) => s.invoices)
   const students = useDataStore((s) => s.students)
@@ -132,6 +133,8 @@ export default function AllocationPage() {
       </div>
     )
   }
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -161,13 +162,13 @@ export default function SubAgentsPage() {
 
   return (
     <div>
+      {api && loading ? (
+        <PageDataSkeleton metrics={0} />
+      ) : (
+      <>
       <PageHeader
         title="Sub-Agent Master"
-        subtitle={
-          loading
-            ? 'Loading…'
-            : `${subAgents.length} sub-agents registered${api ? ' (API)' : ''}`
-        }
+        subtitle={`${subAgents.length} sub-agents registered${api ? ' (API)' : ''}`}
         actionLabel="Add Sub-Agent"
         onAction={openAdd}
       >
@@ -227,6 +228,8 @@ export default function SubAgentsPage() {
           </div>
         </SheetContent>
       </Sheet>
+      </>
+      )}
     </div>
   )
 }

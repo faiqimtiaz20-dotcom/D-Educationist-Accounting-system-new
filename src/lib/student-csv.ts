@@ -169,15 +169,14 @@ function csvEscape(value: string): string {
 function resolveBranchId(raw: string, branches: Branch[]): string | null {
   const v = raw.trim().toLowerCase()
   if (!v) return null
-  const match = branches.find(
-    (b) =>
-      !b.isHeadOffice &&
-      (b.id.toLowerCase() === v ||
-        b.code.toLowerCase() === v ||
-        b.name.toLowerCase() === v ||
-        b.name.toLowerCase().replace(/\s+branch$/, '') === v)
-  )
-  return match?.id ?? null
+  const matches = (b: Branch) =>
+    b.id.toLowerCase() === v ||
+    b.code.toLowerCase() === v ||
+    b.name.toLowerCase() === v ||
+    b.name.toLowerCase().replace(/\s+branch$/, '') === v
+  const operating = branches.filter((b) => !b.isHeadOffice)
+  const pool = operating.length > 0 ? operating : branches
+  return pool.find(matches)?.id ?? null
 }
 
 function resolveCounsellorId(raw: string, usersList: User[]): string | null {

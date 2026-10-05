@@ -1,3 +1,4 @@
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -161,7 +162,7 @@ export default function DocumentsPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [docs, setDocs] = useState<Document[]>(mockDocuments)
+  const [docs, setDocs] = useState<Document[]>(() => (isApiMode() ? [] : mockDocuments))
   const [loading, setLoading] = useState(api)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -221,11 +222,15 @@ export default function DocumentsPage() {
         title="Documents"
         subtitle={
           api
-            ? `Local disk storage (UPLOAD_DIR)${loading ? ' (loading…)' : ''}`
+            ? 'Local disk storage (UPLOAD_DIR)'
             : 'Invoices, receipts, bills, contracts, and agreements'
         }
       />
 
+      {api && loading ? (
+        <PageDataSkeleton metrics={0} />
+      ) : (
+      <>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           {docTypes.map((type) => (
@@ -334,6 +339,8 @@ export default function DocumentsPage() {
             />
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   )

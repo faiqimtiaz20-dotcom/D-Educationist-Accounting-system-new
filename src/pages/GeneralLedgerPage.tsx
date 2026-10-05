@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAccountingApiSync } from '@/hooks/useAccountingApiSync'
@@ -56,7 +57,7 @@ function AccountTreeNode({ node, depth = 0 }: { node: AccountNode; depth?: numbe
 }
 
 export default function GeneralLedgerPage() {
-  const { api, coa } = useAccountingApiSync()
+  const { api, coa, loading } = useAccountingApiSync()
   const journalEntries = useDataStore((s) => s.journalEntries)
   const getChartOfAccounts = useDataStore((s) => s.getChartOfAccounts)
   const reconcileGlPostings = useDataStore((s) => s.reconcileGlPostings)
@@ -81,6 +82,8 @@ export default function GeneralLedgerPage() {
   }, [chartOfAccounts])
 
   const autoPostedCount = journalEntries.filter((e) => e.isAutoPosted).length
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

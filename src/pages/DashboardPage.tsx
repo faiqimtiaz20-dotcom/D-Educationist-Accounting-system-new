@@ -1,6 +1,7 @@
 import CounsellorDashboard from '@/pages/CounsellorDashboard'
 import { FilterPanel } from '@/components/shared/FilterPanel'
 import { MetricCard } from '@/components/shared/MetricCard'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { branchProfit as mockBranchProfit, monthlyRevenueTrend as mockTrend } from '@/data/dashboard'
 import { useCurrentUser, useEffectiveBranchId } from '@/hooks/useAuth'
@@ -156,6 +157,10 @@ export default function DashboardPage() {
     return <CounsellorDashboard />
   }
 
+  if (api && loading) {
+    return <PageDataSkeleton metrics={8} rows={4} />
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-0 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] shadow-md">
@@ -165,7 +170,7 @@ export default function DashboardPage() {
             <h1 className="mt-1 text-2xl font-bold tracking-tight">Dashboard Overview</h1>
             <p className="mt-2 max-w-xl text-sm text-[var(--sidebar-foreground)]/70">
               {api
-                ? `Live metrics from PostgreSQL${loading ? ' (loading…)' : ''}`
+                ? 'Live metrics from PostgreSQL'
                 : 'Monitor collections, expenses, and branch performance across all study abroad operations.'}
             </p>
           </div>

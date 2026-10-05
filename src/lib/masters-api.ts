@@ -88,7 +88,7 @@ export function mapApiSubAgent(a: ApiSubAgent): SubAgent {
   }
 }
 
-export function universityToApiPayload(u: Omit<University, 'id' | 'universityNo'>) {
+export function universityToApiPayload(u: Omit<University, 'id'>) {
   return {
     name: u.name,
     countryName: u.country,
@@ -102,7 +102,7 @@ export function listUniversities() {
   return apiFetch<ApiUniversity[]>('/universities')
 }
 
-export function createUniversity(body: Omit<University, 'id' | 'universityNo'>) {
+export function createUniversity(body: Omit<University, 'id'>) {
   return apiFetch<ApiUniversity>('/universities', {
     method: 'POST',
     body: JSON.stringify(universityToApiPayload(body)),

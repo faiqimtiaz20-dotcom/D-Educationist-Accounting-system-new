@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -182,9 +183,7 @@ export default function EmailSettingsPage() {
       />
 
       {loading ? (
-        <p className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-        </p>
+        <PageDataSkeleton metrics={0} rows={4} />
       ) : (
         <>
           <Card>

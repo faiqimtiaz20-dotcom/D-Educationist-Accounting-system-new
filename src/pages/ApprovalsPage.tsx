@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Button } from '@/components/ui/button'
@@ -59,7 +60,7 @@ export default function ApprovalsPage() {
     void reload()
   }, [reload])
 
-  const approvals = api && apiApprovals ? apiApprovals : storeApprovals
+  const approvals = api ? (apiApprovals ?? []) : storeApprovals
   const branchFiltered = useBranchFilter(approvals)
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return branchFiltered
@@ -139,10 +140,13 @@ export default function ApprovalsPage() {
         title="Approvals"
         subtitle={
           api
-            ? `Expense, journal, reimbursement queue${loading ? ' (loading…)' : ''}`
+            ? 'Expense, journal, reimbursement queue'
             : 'Expense, payment, journal, and refund approval queue'
         }
       />
+      {api && loading ? (
+        <PageDataSkeleton metrics={0} />
+      ) : (
       <DataTable
         data={filtered}
         columns={columns}
@@ -167,6 +171,7 @@ export default function ApprovalsPage() {
         activeStatus={statusFilter}
         onStatusChange={setStatusFilter}
       />
+      )}
     </div>
   )
 }

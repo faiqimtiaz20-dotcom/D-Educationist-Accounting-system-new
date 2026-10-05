@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -68,7 +69,7 @@ function mapApiLedger(api: ApiLedger): LedgerEntry[] {
 }
 
 export default function SubAgentLedgerPage() {
-  const { api } = usePayablesApiSync()
+  const { api, loading } = usePayablesApiSync()
   const subAgents = useDataStore((s) => s.subAgents)
   const subAgentCommissions = useDataStore((s) => s.subAgentCommissions)
   const subAgentPayments = useDataStore((s) => s.subAgentPayments)
@@ -158,6 +159,8 @@ export default function SubAgentLedgerPage() {
     },
     { key: 'status', header: 'Status', cell: (r) => <StatusPill status={r.status} /> },
   ], [])
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

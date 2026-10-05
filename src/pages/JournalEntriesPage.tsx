@@ -1,4 +1,5 @@
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Badge } from '@/components/ui/badge'
@@ -39,7 +40,7 @@ const TEMPLATE_CODES = (function flatten(nodes: typeof chartOfAccountsTemplate):
 const emptyLine = (): JournalLine => ({ accountCode: '', accountName: '', debit: 0, credit: 0 })
 
 export default function JournalEntriesPage() {
-  const { api, reload, postableAccounts } = useAccountingApiSync()
+  const { api, reload, postableAccounts, loading } = useAccountingApiSync()
   const journalEntries = useDataStore((s) => s.journalEntries)
   const branches = useDataStore((s) => s.branches)
   const addManualJournal = useDataStore((s) => s.addManualJournal)
@@ -198,6 +199,8 @@ export default function JournalEntriesPage() {
       }
     })()
   }
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>

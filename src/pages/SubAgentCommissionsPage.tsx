@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
+import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { RowActions } from '@/components/shared/RowActions'
@@ -43,7 +44,7 @@ const emptyCommission = {
 }
 
 export default function SubAgentCommissionsPage() {
-  const { api, reload } = usePayablesApiSync()
+  const { api, reload, loading } = usePayablesApiSync()
   const subAgentCommissions = useDataStore((s) => s.subAgentCommissions)
   const subAgents = useDataStore((s) => s.subAgents)
   const addSubAgentCommission = useDataStore((s) => s.addSubAgentCommission)
@@ -286,6 +287,8 @@ export default function SubAgentCommissionsPage() {
       cell: (r) => <RowActions onEdit={() => openEdit(r)} onDelete={() => handleDelete(r)} />,
     },
   ]
+
+  if (api && loading) return <PageDataSkeleton />
 
   return (
     <div>
