@@ -14,6 +14,7 @@ import { chartOfAccountsTemplate, findAccountName } from '@/lib/coa'
 import { useAccountingApiSync } from '@/hooks/useAccountingApiSync'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useModulePermission } from '@/hooks/usePermission'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency } from '@/lib/calculations'
 import { branchFilterOptions } from '@/lib/filter-options'
 import {
@@ -57,6 +58,7 @@ export default function JournalEntriesPage() {
   const [branchId, setBranchId] = useState(defaultBranchId)
   const [description, setDescription] = useState('')
   const [lines, setLines] = useState<JournalLine[]>([emptyLine(), emptyLine()])
+  const { submitting, runSubmit } = useSubmitState()
 
   const filtered = useBranchFilter(journalEntries)
 
@@ -162,7 +164,7 @@ export default function JournalEntriesPage() {
     }
     const payloadLines = lines.filter((l) => l.accountCode && (l.debit > 0 || l.credit > 0))
 
-    void (async () => {
+    void runSubmit(async () => {
       try {
         if (api) {
           await apiCreate({
@@ -197,7 +199,7 @@ export default function JournalEntriesPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   if (api && loading) return <PageDataSkeleton />
@@ -295,7 +297,13 @@ export default function JournalEntriesPage() {
                 <span className={cn('font-medium', balanced ? 'text-emerald-600' : 'text-destructive')}>
                   {balanced ? 'Balanced' : 'Out of balance'}
                 </span>
-                <Button onClick={handleSubmit} disabled={!balanced || !description}>Save Entry</Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!balanced || !description}
+                  loading={submitting}
+                >
+                  Save Entry
+                </Button>
               </div>
             </div>
           </CardContent>

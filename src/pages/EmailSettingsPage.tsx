@@ -29,7 +29,8 @@ import {
   type SmtpProvider,
 } from '@/lib/email-settings-api'
 import { useModulePermission } from '@/hooks/usePermission'
-import { Loader2, Mail, Unplug } from 'lucide-react'
+import { useSubmitState } from '@/hooks/useSubmitState'
+import { Mail, Unplug } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -47,7 +48,7 @@ export default function EmailSettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<EmailSettingsStatus | null>(null)
   const [loading, setLoading] = useState(api)
-  const [busy, setBusy] = useState(false)
+  const { submitting, runSubmit } = useSubmitState()
 
   const [provider, setProvider] = useState<SmtpProvider>('GMAIL')
   const [fromEmail, setFromEmail] = useState('')
@@ -97,14 +98,14 @@ export default function EmailSettingsPage() {
 
   const onConnect = async (p: SmtpProvider) => {
     if (!canWrite) return
-    setBusy(true)
-    try {
-      const { url } = await startEmailOauth(p)
-      window.location.href = url
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'OAuth start failed')
-      setBusy(false)
-    }
+    await runSubmit(async () => {
+      try {
+        const { url } = await startEmailOauth(p)
+        window.location.href = url
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'OAuth start failed')
+      }
+    })
   }
 
   const onSavePassword = async () => {
@@ -113,25 +114,24 @@ export default function EmailSettingsPage() {
       toast.error('From email is required')
       return
     }
-    setBusy(true)
-    try {
-      const s = await saveSmtpPassword({
-        provider,
-        fromEmail: fromEmail.trim(),
-        fromName: fromName.trim() || undefined,
-        host: provider === 'CUSTOM' ? host.trim() : undefined,
-        port: provider === 'CUSTOM' ? Number(port) || undefined : undefined,
-        username: username.trim() || undefined,
-        password: password || undefined,
-      })
-      setStatus(s)
-      setPassword('')
-      toast.success('SMTP settings saved for this organisation')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    } finally {
-      setBusy(false)
-    }
+    await runSubmit(async () => {
+      try {
+        const s = await saveSmtpPassword({
+          provider,
+          fromEmail: fromEmail.trim(),
+          fromName: fromName.trim() || undefined,
+          host: provider === 'CUSTOM' ? host.trim() : undefined,
+          port: provider === 'CUSTOM' ? Number(port) || undefined : undefined,
+          username: username.trim() || undefined,
+          password: password || undefined,
+        })
+        setStatus(s)
+        setPassword('')
+        toast.success('SMTP settings saved for this organisation')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
+    })
   }
 
   const onTest = async () => {
@@ -139,32 +139,30 @@ export default function EmailSettingsPage() {
       toast.error('Enter a test recipient')
       return
     }
-    setBusy(true)
-    try {
-      const res = await testEmail({ to: testTo.trim() })
-      setStatus(res.status)
-      toast.success('Test email sent')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Test failed')
-      await load()
-    } finally {
-      setBusy(false)
-    }
+    await runSubmit(async () => {
+      try {
+        const res = await testEmail({ to: testTo.trim() })
+        setStatus(res.status)
+        toast.success('Test email sent')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Test failed')
+        await load()
+      }
+    })
   }
 
   const onDisconnect = async () => {
     if (!canWrite) return
     if (!confirm('Disconnect email for this organisation?')) return
-    setBusy(true)
-    try {
-      await disconnectEmail()
-      toast.success('Email disconnected')
-      await load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Disconnect failed')
-    } finally {
-      setBusy(false)
-    }
+    await runSubmit(async () => {
+      try {
+        await disconnectEmail()
+        toast.success('Email disconnected')
+        await load()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Disconnect failed')
+      }
+    })
   }
 
   if (!api) {
@@ -225,7 +223,7 @@ export default function EmailSettingsPage() {
                   variant="outline"
                   size="sm"
                   className="ml-auto"
-                  disabled={busy}
+                  loading={submitting}
                   onClick={() => void onDisconnect()}
                 >
                   <Unplug className="mr-1 h-3.5 w-3.5" /> Disconnect
@@ -245,19 +243,22 @@ export default function EmailSettingsPage() {
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 <Button
-                  disabled={busy || !canWrite || !status?.oauth.gmail}
+                  disabled={!canWrite || !status?.oauth.gmail}
+                  loading={submitting}
                   onClick={() => void onConnect('GMAIL')}
                 >
                   Connect Gmail
                 </Button>
                 <Button
-                  disabled={busy || !canWrite || !status?.oauth.microsoft365}
+                  disabled={!canWrite || !status?.oauth.microsoft365}
+                  loading={submitting}
                   onClick={() => void onConnect('MICROSOFT365')}
                 >
                   Connect Microsoft 365
                 </Button>
                 <Button
-                  disabled={busy || !canWrite || !status?.oauth.outlook}
+                  disabled={!canWrite || !status?.oauth.outlook}
+                  loading={submitting}
                   onClick={() => void onConnect('OUTLOOK')}
                 >
                   Connect Outlook
@@ -367,10 +368,7 @@ export default function EmailSettingsPage() {
               </div>
               {canWrite ? (
                 <div className="sm:col-span-2">
-                  <Button disabled={busy} onClick={() => void onSavePassword()}>
-                    {busy ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
+                  <Button loading={submitting} onClick={() => void onSavePassword()}>
                     Save SMTP
                   </Button>
                 </div>
@@ -392,7 +390,8 @@ export default function EmailSettingsPage() {
                 />
               </div>
               <Button
-                disabled={busy || !status?.connected}
+                disabled={!status?.connected}
+                loading={submitting}
                 onClick={() => void onTest()}
               >
                 Send test

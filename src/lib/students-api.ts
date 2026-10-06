@@ -60,6 +60,7 @@ export function mapApiStudent(s: ApiStudent): Student {
     consultantId: s.counsellorId ?? '',
     country: s.country,
     university: s.university?.name ?? s.universityId,
+    universityId: s.universityId,
     course: s.course,
     intake: s.intake,
     group: s.studentGroup ?? '',

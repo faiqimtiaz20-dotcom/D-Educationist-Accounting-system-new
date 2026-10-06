@@ -41,6 +41,7 @@ export default function AuditTrailPage() {
           module: l.module,
           timestamp: l.timestamp,
           ip: l.ip || '—',
+          entityType: l.entityType ?? undefined,
           entityId: l.entityId ?? undefined,
         })),
       )
@@ -87,7 +88,21 @@ export default function AuditTrailPage() {
       {
         key: 'entity',
         header: 'Entity',
-        cell: (r) => r.entityId ?? '—',
+        cell: (r) => {
+          if (!r.entityType && !r.entityId) return '—'
+          const shortId =
+            r.entityId && r.entityId.length > 12
+              ? `${r.entityId.slice(0, 8)}…`
+              : r.entityId
+          return (
+            <span title={r.entityId}>
+              {r.entityType ?? 'Record'}
+              {shortId ? (
+                <span className="ml-1 font-mono text-xs text-muted-foreground">{shortId}</span>
+              ) : null}
+            </span>
+          )
+        },
       },
       { key: 'ip', header: 'IP', cell: (r) => r.ip },
     ],

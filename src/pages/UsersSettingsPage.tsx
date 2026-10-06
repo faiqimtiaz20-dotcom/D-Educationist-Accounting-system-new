@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import {
   DEFAULT_PERMISSION_MATRIX,
   assignableRolesFor,
@@ -167,6 +168,7 @@ export function UsersSettingsPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyUser(currentUser?.branchId ?? ''))
+  const { submitting, runSubmit } = useSubmitState()
 
   const assignableRoles = currentUser ? assignableRolesFor(currentUser.role) : []
 
@@ -254,50 +256,52 @@ export function UsersSettingsPage() {
       toast.error('Password must be at least 8 characters')
       return
     }
-    try {
-      if (api) {
-        if (isEdit && editId) {
-          await updateUser(editId, {
-            fullName: form.name,
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          if (isEdit && editId) {
+            await updateUser(editId, {
+              fullName: form.name,
+              email: form.email,
+              roleCode: ROLE_NAME_TO_CODE[form.role],
+              branchId: form.branchId,
+              isActive: form.isActive,
+              ...(form.password ? { password: form.password } : {}),
+            })
+            toast.success('User updated')
+          } else {
+            await createUser({
+              fullName: form.name,
+              email: form.email,
+              password: form.password!,
+              roleCode: ROLE_NAME_TO_CODE[form.role],
+              branchId: form.branchId,
+            })
+            toast.success('User added')
+          }
+          await load()
+        } else if (isEdit && editId) {
+          updateStoreUser(editId, {
+            name: form.name,
             email: form.email,
-            roleCode: ROLE_NAME_TO_CODE[form.role],
+            role: form.role,
             branchId: form.branchId,
-            isActive: form.isActive,
-            ...(form.password ? { password: form.password } : {}),
           })
           toast.success('User updated')
         } else {
-          await createUser({
-            fullName: form.name,
+          addStoreUser({
+            name: form.name,
             email: form.email,
-            password: form.password!,
-            roleCode: ROLE_NAME_TO_CODE[form.role],
+            role: form.role,
             branchId: form.branchId,
           })
           toast.success('User added')
         }
-        await load()
-      } else if (isEdit && editId) {
-        updateStoreUser(editId, {
-          name: form.name,
-          email: form.email,
-          role: form.role,
-          branchId: form.branchId,
-        })
-        toast.success('User updated')
-      } else {
-        addStoreUser({
-          name: form.name,
-          email: form.email,
-          role: form.role,
-          branchId: form.branchId,
-        })
-        toast.success('User added')
+        setDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const handlePermissionChange = async (
@@ -603,10 +607,10 @@ export function UsersSettingsPage() {
               </div>
             ) : null}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleSave()}>
+              <Button onClick={() => void handleSave()} loading={submitting}>
                 {isEdit ? 'Save Changes' : 'Add User'}
               </Button>
             </div>

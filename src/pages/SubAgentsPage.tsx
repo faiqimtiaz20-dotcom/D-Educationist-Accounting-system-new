@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { isApiMode } from '@/lib/api-client'
 import {
   createSubAgent as apiCreateSubAgent,
@@ -44,6 +45,7 @@ export default function SubAgentsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<SubAgentForm>(emptyForm)
+  const { submitting, runSubmit } = useSubmitState()
 
   const load = useCallback(async () => {
     if (!api) return
@@ -90,27 +92,29 @@ export default function SubAgentsPage() {
       return
     }
 
-    try {
-      if (api) {
-        if (editingId) {
-          await apiUpdateSubAgent(editingId, form)
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          if (editingId) {
+            await apiUpdateSubAgent(editingId, form)
+            toast.success('Sub-agent updated')
+          } else {
+            await apiCreateSubAgent(form)
+            toast.success('Sub-agent added')
+          }
+          await load()
+        } else if (editingId) {
+          updateSubAgent(editingId, form)
           toast.success('Sub-agent updated')
         } else {
-          await apiCreateSubAgent(form)
+          addSubAgent(form)
           toast.success('Sub-agent added')
         }
-        await load()
-      } else if (editingId) {
-        updateSubAgent(editingId, form)
-        toast.success('Sub-agent updated')
-      } else {
-        addSubAgent(form)
-        toast.success('Sub-agent added')
+        setSheetOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setSheetOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const handleDelete = async (agent: SubAgent) => {
@@ -222,7 +226,7 @@ export default function SubAgentsPage() {
               <Label>Account No.</Label>
               <Input value={form.accountNo} onChange={(e) => setForm({ ...form, accountNo: e.target.value })} />
             </div>
-            <Button className="w-full" onClick={() => void handleSave()}>
+            <Button className="w-full" onClick={() => void handleSave()} loading={submitting}>
               {editingId ? 'Update' : 'Add'} Sub-Agent
             </Button>
           </div>

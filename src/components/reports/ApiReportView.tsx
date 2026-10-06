@@ -12,14 +12,69 @@ import {
   type ApiReportPayload,
   type ReportRow,
 } from '@/lib/reports-api'
-import { FileSpreadsheet, FileText, Printer } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
-function formatCell(value: unknown) {
+const TOTAL_LABELS: Record<string, string> = {
+  incomePKR: 'Income',
+  expensesPKR: 'Expenses',
+  profitPKR: 'Profit',
+  subAgentCostPKR: 'Sub-Agent Cost',
+  earnedPKR: 'Earned',
+  receivedPKR: 'Received',
+  outstanding: 'Outstanding',
+  assets: 'Assets',
+  liabilities: 'Liabilities',
+  equity: 'Equity',
+  liabilitiesEquity: 'Liabilities & Equity',
+  periodNetIncome: 'Period Net Income',
+  balanced: 'Balanced',
+  totalDebit: 'Total Debit',
+  totalCredit: 'Total Credit',
+  totalPKR: 'Total (PKR)',
+  approvedPKR: 'Approved (PKR)',
+  expenseCount: 'Expenses',
+  invoiceCount: 'Invoices',
+  amount: 'Amount',
+}
+
+function humanizeKey(key: string) {
+  return (
+    TOTAL_LABELS[key] ??
+    key
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/_/g, ' ')
+      .replace(/\bPKR\b/g, '(PKR)')
+      .replace(/^\w/, (c) => c.toUpperCase())
+  )
+}
+
+function formatCell(value: unknown, key?: string) {
   if (value == null) return '—'
   if (typeof value === 'number') {
-    if (Number.isFinite(value) && Math.abs(value) >= 1) {
+    // Counts / flags — never currency-format
+    if (
+      key &&
+      /(count|balanced|qty|quantity|invoices|expenses)$/i.test(key)
+    ) {
+      return String(value)
+    }
+    if (Number.isFinite(value) && !Number.isInteger(value)) {
+      return formatCurrency(value)
+    }
+    // Integer money fields are typically large; small integers (0–999) that look like counts stay plain
+    if (
+      Number.isInteger(value) &&
+      Math.abs(value) < 1000 &&
+      key &&
+      !/(pkr|amount|balance|debit|credit|income|expense|profit|cost|total|earned|received|outstanding)/i.test(
+        key,
+      )
+    ) {
+      return String(value)
+    }
+    if (Number.isFinite(value)) {
       return formatCurrency(value)
     }
     return String(value)
@@ -70,7 +125,7 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
       header: c.header,
       cell: (r: ReportRow) => (
         <span className={typeof r[c.key] === 'number' ? 'tabular-nums' : undefined}>
-          {formatCell(r[c.key])}
+          {formatCell(r[c.key], c.key)}
         </span>
       ),
       className: typeof data.rows[0]?.[c.key] === 'number' ? 'text-right' : undefined,
@@ -84,7 +139,7 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
       header: c.header,
       cell: (r: ReportRow) => (
         <span className={typeof r[c.key] === 'number' ? 'tabular-nums' : undefined}>
-          {formatCell(r[c.key])}
+          {formatCell(r[c.key], c.key)}
         </span>
       ),
       className:
@@ -92,21 +147,15 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
     }))
   }, [data])
 
-  const handleExport = async (format: 'PDF' | 'Excel' | 'CSV') => {
-    if (format === 'CSV') {
-      try {
-        await downloadReportCsv(slug, {
-          branchId: effectiveBranchId !== 'all' ? effectiveBranchId : undefined,
-        })
-        toast.success('CSV downloaded')
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'CSV export failed')
-      }
-      return
+  const handleExport = async () => {
+    try {
+      await downloadReportCsv(slug, {
+        branchId: effectiveBranchId !== 'all' ? effectiveBranchId : undefined,
+      })
+      toast.success('CSV downloaded')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'CSV export failed')
     }
-    toast.message(`${format} export is not available yet`, {
-      description: 'Use CSV export for this report.',
-    })
   }
 
   const totals = data?.totals ?? {}
@@ -119,13 +168,7 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
         subtitle={data?.description}
         backTo={backTo}
       >
-        <Button variant="outline" size="sm" onClick={() => handleExport('PDF')}>
-          <FileText className="mr-1.5 h-4 w-4" /> PDF
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExport('Excel')}>
-          <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Excel
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExport('CSV')}>
+        <Button variant="outline" size="sm" onClick={() => void handleExport()}>
           <Printer className="mr-1.5 h-4 w-4" /> CSV
         </Button>
       </PageHeader>
@@ -141,8 +184,12 @@ export function ApiReportView({ slug, title, backTo = '/reports' }: Props) {
               {metricEntries.map(([key, value]) => (
                 <MetricCard
                   key={key}
-                  title={key}
-                  value={formatCurrency(Number(value) || 0)}
+                  title={humanizeKey(key)}
+                  value={
+                    /(count|balanced)$/i.test(key)
+                      ? String(value ?? 0)
+                      : formatCurrency(Number(value) || 0)
+                  }
                 />
               ))}
             </div>

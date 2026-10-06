@@ -252,6 +252,43 @@ export function listBankAccounts(branchId?: string) {
   return apiFetch<ApiBankAccount[]>(`/bank-accounts${q}`)
 }
 
+export function createBankAccount(body: {
+  branchId: string
+  name: string
+  bankName: string
+  accountNo: string
+  currencyCode: string
+  openingBalance?: number
+  isActive?: boolean
+}) {
+  return apiFetch<ApiBankAccount>('/bank-accounts', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateBankAccount(
+  id: string,
+  body: Partial<{
+    branchId: string
+    name: string
+    bankName: string
+    accountNo: string
+    currencyCode: string
+    openingBalance: number
+    isActive: boolean
+  }>,
+) {
+  return apiFetch<ApiBankAccount>(`/bank-accounts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteBankAccount(id: string) {
+  return apiFetch<{ success: boolean }>(`/bank-accounts/${id}`, { method: 'DELETE' })
+}
+
 export function listGlAccounts() {
   return apiFetch<ApiGlAccount[]>('/gl-accounts')
 }
@@ -272,4 +309,20 @@ export function listFxRates() {
       effectiveDate: string
     }>
   >('/fx-rates')
+}
+
+export function upsertFxRate(body: {
+  currencyCode: string
+  rateToPkr: number
+  effectiveDate?: string
+}) {
+  return apiFetch<{
+    id: string
+    currencyCode: string
+    rateToPkr: string | number
+    effectiveDate: string
+  }>('/fx-rates', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
 }

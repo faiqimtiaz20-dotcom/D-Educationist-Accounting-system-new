@@ -31,6 +31,7 @@ export default function ApprovalsPage() {
   const [statusFilter, setStatusFilter] = useState('Pending')
   const [apiApprovals, setApiApprovals] = useState<Approval[] | null>(null)
   const [loading, setLoading] = useState(api)
+  const [actioningId, setActioningId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     if (!api) return
@@ -69,14 +70,22 @@ export default function ApprovalsPage() {
 
   const handleAction = async (id: string, status: 'Approved' | 'Rejected') => {
     if (!user || !canApprove) {
-      toast.error('You do not have approval authority')
+      toast.error('You do not have approval authority for this module')
       return
     }
+    if (actioningId) return
     const approval = approvals.find((a) => a.id === id)
-    if (approval?.requestedById === user.id) {
-      toast.error('Segregation of duties: you cannot approve your own request')
+    if (!approval) {
+      toast.error('Approval request not found — refresh and try again')
       return
     }
+    if (approval.requestedById && approval.requestedById === user.id) {
+      toast.error(
+        'Cannot approve your own request (segregation of duties). Ask another authorised user.',
+      )
+      return
+    }
+    setActioningId(id)
     try {
       if (api) {
         await decideApproval(id, status === 'Approved' ? 'approve' : 'reject')
@@ -85,10 +94,12 @@ export default function ApprovalsPage() {
       } else {
         const ok = processApproval(id, status, user.id)
         if (ok) toast.success(`Request ${status.toLowerCase()}`)
-        else toast.error('Unable to process approval')
+        else toast.error('Unable to process approval — check segregation of duties')
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Unable to process approval')
+    } finally {
+      setActioningId(null)
     }
   }
 
@@ -111,11 +122,24 @@ export default function ApprovalsPage() {
       cell: (r) =>
         r.status === 'Pending' && canApprove ? (
           <div className="flex flex-wrap gap-1">
-            <Button size="sm" variant="outline" className="h-8 text-emerald-600" onClick={() => void handleAction(r.id, 'Approved')}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-emerald-600"
+              loading={actioningId === r.id}
+              disabled={actioningId !== null}
+              onClick={() => void handleAction(r.id, 'Approved')}
+            >
               <Check className="h-3.5 w-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Approve</span>
             </Button>
-            <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => void handleAction(r.id, 'Rejected')}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-destructive"
+              disabled={actioningId !== null}
+              onClick={() => void handleAction(r.id, 'Rejected')}
+            >
               <X className="h-3.5 w-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Reject</span>
             </Button>
@@ -124,7 +148,7 @@ export default function ApprovalsPage() {
           <span className="text-xs text-muted-foreground">—</span>
         ),
     },
-  ], [canApprove, approvals, api])
+  ], [canApprove, approvals, api, actioningId])
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: branchFiltered.length }

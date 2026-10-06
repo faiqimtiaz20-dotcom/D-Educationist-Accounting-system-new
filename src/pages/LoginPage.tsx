@@ -6,7 +6,8 @@ import { DEMO_ACCOUNTS, getDemoPassword } from '@/lib/auth-credentials'
 import { isApiMode, isDemoLoginAllowed } from '@/lib/api-client'
 import { defaultHomePath, isCrmAdminUser } from '@/lib/crm'
 import { useAuthStore } from '@/store/auth-store'
-import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
+import { useSubmitState } from '@/hooks/useSubmitState'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,7 +23,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(!!rememberedEmail)
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { submitting, runSubmit } = useSubmitState()
   const [error, setError] = useState('')
 
   const from = (location.state as { from?: string })?.from ?? '/'
@@ -36,24 +37,22 @@ export default function LoginPage() {
       return
     }
 
-    setLoading(true)
-
-    const result = await login(email, password, remember)
-    setLoading(false)
-
-    if (result.success) {
-      toast.success('Welcome back!')
-      const apiUser = useAuthStore.getState().apiUser
-      const home = defaultHomePath(apiUser)
-      // CRM always lands on CRM console; tenant users honor deep-link unless it's a CRM path
-      const dest =
-        isCrmAdminUser(apiUser) || from.startsWith('/crm')
-          ? home
-          : from || home
-      navigate(dest, { replace: true })
-    } else {
-      setError(result.error ?? 'Login failed')
-    }
+    await runSubmit(async () => {
+      const result = await login(email, password, remember)
+      if (result.success) {
+        toast.success('Welcome back!')
+        const apiUser = useAuthStore.getState().apiUser
+        const home = defaultHomePath(apiUser)
+        // CRM always lands on CRM console; tenant users honor deep-link unless it's a CRM path
+        const dest =
+          isCrmAdminUser(apiUser) || from.startsWith('/crm')
+            ? home
+            : from || home
+        navigate(dest, { replace: true })
+      } else {
+        setError(result.error ?? 'Login failed')
+      }
+    })
   }
 
   const fillDemo = (demoEmail: string) => {
@@ -140,7 +139,7 @@ export default function LoginPage() {
                     className="pl-9"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
+                    disabled={submitting}
                     required
                   />
                 </div>
@@ -158,7 +157,7 @@ export default function LoginPage() {
                     className="pl-9 pr-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
+                    disabled={submitting}
                     required
                   />
                   <Button
@@ -194,16 +193,9 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-[var(--sidebar)] hover:bg-[var(--sidebar)]/90"
-                disabled={loading}
+                loading={submitting}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign in'
-                )}
+                Sign in
               </Button>
             </form>
 

@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Textarea } from '@/components/ui/textarea'
 import { users as mockUsers } from '@/data'
 import { useCurrentUser } from '@/hooks/useAuth'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { isApiMode } from '@/lib/api-client'
 import { formatCurrency, netFee } from '@/lib/calculations'
@@ -19,8 +20,10 @@ import { canViewAllBranches } from '@/lib/permissions'
 import { getUserName } from '@/lib/org'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import {
+  listCountries,
   listUniversities,
   listSubAgents,
+  mapApiTenantCountry,
   mapApiUniversity,
   mapApiSubAgent,
 } from '@/lib/masters-api'
@@ -39,12 +42,22 @@ import {
   updateStudent as apiUpdateStudent,
 } from '@/lib/students-api'
 import { useDataStore } from '@/store/data-store'
-import type { ApplicationStatus, Branch, Student, SubAgent, University, User } from '@/types'
+import type {
+  ApplicationStatus,
+  Branch,
+  Student,
+  SubAgent,
+  TenantCountry,
+  University,
+  User,
+} from '@/types'
 import { ChevronLeft, ChevronRight, Download, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 const statuses: ApplicationStatus[] = ['Applied', 'Offer', 'Visa', 'Enrolled', 'Deferred', 'Withdrawn']
+
+const FALLBACK_COUNTRIES = ['UK', 'USA', 'Canada', 'Australia', 'Germany', 'Ireland', 'New Zealand']
 
 function mapApiBranch(b: ApiBranch): Branch {
   return {
@@ -80,7 +93,7 @@ const emptyStudent = (branchId: string, consultantId: string): Omit<Student, 'id
   email: '',
   branchId,
   consultantId,
-  country: 'UK',
+  country: '',
   university: '',
   course: '',
   intake: 'Sep-2026',
@@ -109,6 +122,7 @@ export default function MasterSheetPage() {
   const STUDENT_PAGE = 50
   const [apiBranches, setApiBranches] = useState<Branch[]>([])
   const [apiUniversities, setApiUniversities] = useState<University[]>([])
+  const [apiCountries, setApiCountries] = useState<TenantCountry[]>([])
   const [apiSubAgents, setApiSubAgents] = useState<SubAgent[]>([])
   const [apiUsers, setApiUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(api)
@@ -123,12 +137,20 @@ export default function MasterSheetPage() {
   )
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { submitting, runSubmit } = useSubmitState()
 
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
   const isCounsellor = currentUser?.role === 'Counsellor'
 
   const branches = api ? apiBranches : storeBranches
   const universities = api ? apiUniversities : storeUniversities
+  const countries: TenantCountry[] = api
+    ? apiCountries
+    : FALLBACK_COUNTRIES.map((name, i) => ({
+        id: `local-${i}`,
+        name,
+        isActive: true,
+      }))
   const subAgents = api ? apiSubAgents : storeSubAgents
   const allUsers = api ? apiUsers : mockUsers
   const counsellorUsers = useMemo(
@@ -160,9 +182,10 @@ export default function MasterSheetPage() {
     if (!api) return
     setLoading(true)
     try {
-      const [studentsPage, uniRows, saRows, branchRows, userRows] = await Promise.all([
+      const [studentsPage, uniRows, countryRows, saRows, branchRows, userRows] = await Promise.all([
         listStudentsPage({ take: STUDENT_PAGE, skip: studentPage * STUDENT_PAGE }),
         listUniversities(),
+        listCountries(),
         listSubAgents(),
         listBranches(),
         listUsers(),
@@ -171,6 +194,7 @@ export default function MasterSheetPage() {
       setStudentTotal(studentsPage.total)
       setApiUniversities(uniRows.map(mapApiUniversity))
       setUniIdByName(Object.fromEntries(uniRows.map((u) => [u.name, u.id])))
+      setApiCountries(countryRows.map(mapApiTenantCountry).filter((c) => c.isActive !== false))
       setApiSubAgents(saRows.map(mapApiSubAgent))
       setApiBranches(branchRows.map(mapApiBranch))
       setApiUsers(userRows.map(mapApiUserRow))
@@ -380,6 +404,18 @@ export default function MasterSheetPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  const loadCountry = (countryName: string) => {
+    setForm((prev) => {
+      const uni = universities.find((u) => u.name === prev.university)
+      const uniMatches = uni && uni.country.toLowerCase() === countryName.toLowerCase()
+      return {
+        ...prev,
+        country: countryName,
+        university: uniMatches ? prev.university : '',
+      }
+    })
+  }
+
   const loadUniversity = (universityName: string) => {
     const uni = universities.find((u) => u.name === universityName)
     if (!uni) return
@@ -392,17 +428,36 @@ export default function MasterSheetPage() {
     }))
   }
 
+  const countryOptions = useMemo(() => {
+    const names = countries.map((c) => c.name)
+    if (form.country && !names.includes(form.country)) {
+      return [form.country, ...names]
+    }
+    return names
+  }, [countries, form.country])
+
   const universityOptions = useMemo(() => {
-    const names = universities.map((u) => u.name)
+    const filtered = form.country
+      ? universities.filter((u) => u.country.toLowerCase() === form.country.toLowerCase())
+      : universities
+    const names = filtered.map((u) => u.name)
     if (form.university && !names.includes(form.university)) {
       return [form.university, ...names]
     }
     return names
-  }, [universities, form.university])
+  }, [universities, form.country, form.university])
 
   const handleSave = async () => {
     if (!form.name.trim()) {
       toast.error('Student name is required')
+      return
+    }
+    if (!form.cnicPassport.trim()) {
+      toast.error('CNIC / Passport is required')
+      return
+    }
+    if (!form.country) {
+      toast.error('Please select a country')
       return
     }
     if (!form.university) {
@@ -412,40 +467,42 @@ export default function MasterSheetPage() {
     const branchId = isSuperAdmin ? form.branchId : (currentUser?.branchId ?? form.branchId)
     const consultantId =
       isCounsellor && currentUser ? currentUser.id : form.consultantId
-    try {
-      if (api) {
-        const uniId = resolveUniversityId(form.university)
-        if (!uniId) {
-          toast.error('Selected university is not registered in the API')
-          return
-        }
-        const payload = studentFormToApiPayload(
-          { ...form, branchId, consultantId } as Student,
-          uniId,
-        )
-        if (isNew) {
-          await apiCreateStudent(payload)
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          const uniId = resolveUniversityId(form.university)
+          if (!uniId) {
+            toast.error('Selected university is not registered in the API')
+            return
+          }
+          const payload = studentFormToApiPayload(
+            { ...form, branchId, consultantId } as Student,
+            uniId,
+          )
+          if (isNew) {
+            await apiCreateStudent(payload)
+            toast.success('Student added successfully')
+          } else if ('id' in form) {
+            await apiUpdateStudent(form.id, payload)
+            toast.success('Student updated successfully')
+          }
+          await load()
+        } else if (isNew) {
+          addStudent({
+            ...(form as Omit<Student, 'id'>),
+            branchId,
+            consultantId,
+          })
           toast.success('Student added successfully')
         } else if ('id' in form) {
-          await apiUpdateStudent(form.id, payload)
+          updateStudent(form.id, { ...form, branchId, consultantId })
           toast.success('Student updated successfully')
         }
-        await load()
-      } else if (isNew) {
-        addStudent({
-          ...(form as Omit<Student, 'id'>),
-          branchId,
-          consultantId,
-        })
-        toast.success('Student added successfully')
-      } else if ('id' in form) {
-        updateStudent(form.id, { ...form, branchId, consultantId })
-        toast.success('Student updated successfully')
+        setSheetOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setSheetOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const counsellorDisplayName = (id: string) => {
@@ -541,8 +598,8 @@ export default function MasterSheetPage() {
         <Button type="button" variant="outline" onClick={handleDownloadTemplate}>
           <Download className="mr-1 h-4 w-4" /> Template
         </Button>
-        <Button type="button" variant="outline" disabled={importing} onClick={handleImportClick}>
-          <Upload className="mr-1 h-4 w-4" /> {importing ? 'Importing…' : 'Import CSV'}
+        <Button type="button" variant="outline" loading={importing} onClick={handleImportClick}>
+          <Upload className="mr-1 h-4 w-4" /> Import CSV
         </Button>
       </PageHeader>
 
@@ -630,10 +687,12 @@ export default function MasterSheetPage() {
                 <Input value={form.name} onChange={(e) => updateField('name', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>CNIC / Passport</Label>
+                <Label>CNIC / Passport <span className="text-destructive">*</span></Label>
                 <Input
                   value={form.cnicPassport}
                   onChange={(e) => updateField('cnicPassport', e.target.value)}
+                  placeholder="e.g. 42101-1234567-1"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -700,10 +759,40 @@ export default function MasterSheetPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>University</Label>
-                <Select value={form.university || undefined} onValueChange={loadUniversity}>
+                <Label>Country</Label>
+                <Select value={form.country || undefined} onValueChange={loadCountry}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select registered university" />
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryOptions.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {countries.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No countries registered. Add them in Settings → Countries.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>University</Label>
+                <Select
+                  value={form.university || undefined}
+                  onValueChange={loadUniversity}
+                  disabled={!form.country && countries.length > 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        form.country
+                          ? 'Select registered university'
+                          : 'Select country first'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {universityOptions.map((name) => {
@@ -717,15 +806,16 @@ export default function MasterSheetPage() {
                     })}
                   </SelectContent>
                 </Select>
-                {universities.length === 0 && (
+                {form.country && universityOptions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No universities for this country. Add them in Settings → Registered Universities.
+                  </p>
+                )}
+                {!form.country && universities.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     No universities registered. Add them in Settings → Registered Universities.
                   </p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Input value={form.country} readOnly className="bg-muted/50" />
               </div>
               <div className="space-y-2">
                 <Label>Course</Label>
@@ -818,10 +908,12 @@ export default function MasterSheetPage() {
               <Textarea placeholder="Additional notes..." rows={3} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setSheetOpen(false)}>
+              <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleSave()}>{isNew ? 'Add Student' : 'Save Changes'}</Button>
+              <Button onClick={() => void handleSave()} loading={submitting}>
+                {isNew ? 'Add Student' : 'Save Changes'}
+              </Button>
             </div>
           </div>
         </SheetContent>

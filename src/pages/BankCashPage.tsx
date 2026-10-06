@@ -1,28 +1,57 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { PageDataSkeleton } from '@/components/shared/PageDataSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { RowActions } from '@/components/shared/RowActions'
 import { StatusPill } from '@/components/shared/StatusPill'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   bankAccounts as mockAccounts,
   bankTransactions as mockTxns,
   cheques as mockCheques,
-  getBranchName,
 } from '@/data'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
+import { useModulePermission } from '@/hooks/usePermission'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency } from '@/lib/calculations'
 import { updateBankTransaction, updateChequeStatus } from '@/lib/cash-api'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
-import type { BankAccount, BankTransaction, Cheque } from '@/types'
+import {
+  createBankAccount,
+  deleteBankAccount,
+  updateBankAccount,
+} from '@/lib/masters-api'
+import { getBranchName } from '@/lib/org'
+import { useAppStore } from '@/store/app-store'
+import { useDataStore } from '@/store/data-store'
+import type { BankAccount, BankTransaction, Cheque, Currency } from '@/types'
 import { Building2, CreditCard, FileCheck, Landmark } from 'lucide-react'
 import { toast } from 'sonner'
 
+const currencies: Currency[] = ['PKR', 'GBP', 'USD', 'CAD', 'AUD', 'EUR']
+
+type BankForm = {
+  branchId: string
+  name: string
+  bankName: string
+  accountNo: string
+  currency: Currency
+  openingBalance: number
+}
+
 export default function BankCashPage() {
+  const { canWrite } = useModulePermission('Bank & Cash')
   const { api, reload, banks, transactions, cheques, loading } = useCashApiSync()
+  const branches = useDataStore((s) => s.branches)
+  const selectedBranchId = useAppStore((s) => s.selectedBranchId)
+
   const bankAccounts = api ? banks : mockAccounts
   const bankTransactions = api ? transactions : mockTxns
   const chequeList = api ? cheques : mockCheques
@@ -34,10 +63,100 @@ export default function BankCashPage() {
   const filteredCheques = chequeList.filter((c) => accountIds.has(c.bankAccountId))
   const unmatched = filteredTransactions.filter((t) => t.reconciliationStatus === 'Unmatched')
 
+  const defaultBranchId =
+    selectedBranchId === 'all'
+      ? (branches.find((b) => b.code === 'KHI')?.id ?? branches[0]?.id ?? '')
+      : selectedBranchId
+
+  const emptyForm = (): BankForm => ({
+    branchId: defaultBranchId,
+    name: '',
+    bankName: '',
+    accountNo: '',
+    currency: 'PKR',
+    openingBalance: 0,
+  })
+
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [isEdit, setIsEdit] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [form, setForm] = useState<BankForm>(emptyForm)
+  const { submitting, runSubmit } = useSubmitState()
+
+  const canManage = Boolean(api && canWrite)
+
   const totalBalance = filteredAccounts.reduce((s, a) => {
     if (a.currency === 'PKR') return s + a.balance
     return s
   }, 0)
+
+  const openAdd = () => {
+    setIsEdit(false)
+    setEditId(null)
+    setForm(emptyForm())
+    setDialogOpen(true)
+  }
+
+  const openEdit = (row: BankAccount) => {
+    setIsEdit(true)
+    setEditId(row.id)
+    setForm({
+      branchId: row.branchId,
+      name: row.name,
+      bankName: row.bankName,
+      accountNo: row.accountNo,
+      currency: row.currency,
+      openingBalance: row.openingBalance ?? 0,
+    })
+    setDialogOpen(true)
+  }
+
+  const handleDelete = async (row: BankAccount) => {
+    if (!canManage) return
+    if (!confirm(`Delete bank account "${row.name}"?`)) return
+    try {
+      await deleteBankAccount(row.id)
+      await reload()
+      toast.success('Bank account deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
+  const handleSave = async () => {
+    if (!canManage) return
+    if (!form.name.trim() || !form.bankName.trim() || !form.accountNo.trim()) {
+      toast.error('Name, bank, and account number are required')
+      return
+    }
+    if (!form.branchId) {
+      toast.error('Branch is required')
+      return
+    }
+    await runSubmit(async () => {
+      try {
+        const body = {
+          branchId: form.branchId,
+          name: form.name.trim(),
+          bankName: form.bankName.trim(),
+          accountNo: form.accountNo.trim(),
+          currencyCode: form.currency,
+          openingBalance: Number(form.openingBalance) || 0,
+        }
+        if (isEdit && editId) {
+          await updateBankAccount(editId, body)
+          toast.success('Bank account updated')
+        } else {
+          await createBankAccount(body)
+          toast.success('Bank account added')
+        }
+        setDialogOpen(false)
+        await reload()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
+    })
+  }
 
   const markMatched = async (row: BankTransaction) => {
     if (!api || row.reconciliationStatus === 'Matched') return
@@ -76,6 +195,17 @@ export default function BankCashPage() {
       cell: (r) => <span className="font-semibold">{formatCurrency(r.balance, r.currency)}</span>,
       className: 'text-right',
     },
+    ...(canManage
+      ? [
+          {
+            key: 'actions',
+            header: 'Actions',
+            cell: (r: BankAccount) => (
+              <RowActions onEdit={() => openEdit(r)} onDelete={() => void handleDelete(r)} />
+            ),
+          } satisfies Column<BankAccount>,
+        ]
+      : []),
   ]
 
   const transactionColumns: Column<BankTransaction>[] = [
@@ -179,6 +309,8 @@ export default function BankCashPage() {
       <PageHeader
         title="Bank & Cash Management"
         subtitle="Accounts, transactions, reconciliation, and cheque register"
+        actionLabel={canManage ? 'Add Bank Account' : undefined}
+        onAction={canManage ? openAdd : undefined}
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -264,6 +396,98 @@ export default function BankCashPage() {
           />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEdit ? 'Edit Bank Account' : 'Add Bank Account'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Account Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. HBL Current – KHI"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Bank Name</Label>
+                <Input
+                  value={form.bankName}
+                  onChange={(e) => setForm({ ...form, bankName: e.target.value })}
+                  placeholder="e.g. Habib Bank"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Account No.</Label>
+                <Input
+                  value={form.accountNo}
+                  onChange={(e) => setForm({ ...form, accountNo: e.target.value })}
+                  placeholder="Account number"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Branch</Label>
+                <Select
+                  value={form.branchId || undefined}
+                  onValueChange={(v) => setForm({ ...form, branchId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select
+                  value={form.currency}
+                  onValueChange={(v) => setForm({ ...form, currency: v as Currency })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Opening Balance</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.openingBalance}
+                onChange={(e) => setForm({ ...form, openingBalance: Number(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSave()} loading={submitting}>
+                {isEdit ? 'Save' : 'Add Account'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

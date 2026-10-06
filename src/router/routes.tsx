@@ -1,6 +1,7 @@
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { GuestGuard } from '@/components/auth/GuestGuard'
 import { AppShell } from '@/components/layout/AppShell'
+import { RouteErrorBoundary } from '@/components/shared/RouteErrorBoundary'
 import LoginPage from '@/pages/LoginPage'
 import DashboardPage from '@/pages/DashboardPage'
 import MasterSheetPage from '@/pages/MasterSheetPage'
@@ -54,6 +55,7 @@ export const routes: RouteObject[] = [
         <LoginPage />
       </GuestGuard>
     ),
+    errorElement: <RouteErrorBoundary />,
   },
   {
     path: '/',
@@ -62,6 +64,7 @@ export const routes: RouteObject[] = [
         <AppShell />
       </AuthGuard>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'crm/tenants', element: <CrmTenantsPage /> },

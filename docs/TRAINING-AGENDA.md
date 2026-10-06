@@ -17,8 +17,9 @@
 
 ## Materials to share before the call
 
-- [USER-GUIDE.md](./USER-GUIDE.md)  
-- [TRAINING-CRM-VS-TENANT-ADMIN.md](./TRAINING-CRM-VS-TENANT-ADMIN.md)  
+- [TENANT-USER-PROCESS-GUIDE.md](./TENANT-USER-PROCESS-GUIDE.md) — full tenant process (primary handout)  
+- [USER-GUIDE.md](./USER-GUIDE.md) — short overview  
+- [TRAINING-CRM-VS-TENANT-ADMIN.md](./TRAINING-CRM-VS-TENANT-ADMIN.md) — only if platform ops attend  
 - [UAT-CHECKLIST.md](./UAT-CHECKLIST.md)  
 - Staging URL + Tenant Admin, counsellor, and (if needed) CRM test accounts  
 

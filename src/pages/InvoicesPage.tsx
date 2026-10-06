@@ -18,11 +18,12 @@ import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { getBranchName } from '@/data'
+import { getBranchName } from '@/lib/org'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useModulePermission } from '@/hooks/usePermission'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { canViewAllBranches } from '@/lib/permissions'
 import { formatCurrency, netFee } from '@/lib/calculations'
 import {
@@ -139,6 +140,8 @@ export default function InvoicesPage() {
   const [emailForm, setEmailForm] = useState({ to: '', cc: '', subject: '', body: '' })
   const [studentSearch, setStudentSearch] = useState('')
   const [universityFilter, setUniversityFilter] = useState('all')
+  const { submitting: saving, runSubmit: runSave } = useSubmitState()
+  const { submitting: sending, runSubmit: runSend } = useSubmitState()
 
   const paymentInvoice = paymentInvoiceId
     ? invoices.find((i) => i.id === paymentInvoiceId) ?? null
@@ -280,50 +283,48 @@ export default function InvoicesPage() {
       toast.error('Recipient (To) is required')
       return
     }
-    if (isResend) {
-      try {
-        if (api) {
-          const res = await apiSendInvoice(sendInvoice.id, emailForm)
-          toast.success(
-            res.message ??
-              (res.emailSent
-                ? `Invoice ${sendInvoice.invoiceNo} emailed to ${emailForm.to}`
-                : `Invoice ${sendInvoice.invoiceNo} resend logged`),
-          )
-          await reload()
-        } else {
-          toast.success(`Invoice ${sendInvoice.invoiceNo} resent to ${emailForm.to}`)
-        }
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Resend failed')
-      }
-      setSendInvoice(null)
-      return
-    }
-    if (isDateLocked(sendInvoice.invoiceDate)) {
+    if (!isResend && isDateLocked(sendInvoice.invoiceDate)) {
       toast.error('This period is locked — cannot post to a closed fiscal period')
       return
     }
-    try {
-      if (api) {
-        const res = await apiSendInvoice(sendInvoice.id, emailForm)
-        await reload()
-        if (res.emailSent) {
-          toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
-        } else {
-          toast.warning(
-            res.message ??
-              `Invoice marked Sent; email not delivered (configure Settings → Email)`,
-          )
+    await runSend(async () => {
+      try {
+        if (isResend) {
+          if (api) {
+            const res = await apiSendInvoice(sendInvoice.id, emailForm)
+            toast.success(
+              res.message ??
+                (res.emailSent
+                  ? `Invoice ${sendInvoice.invoiceNo} emailed to ${emailForm.to}`
+                  : `Invoice ${sendInvoice.invoiceNo} resend logged`),
+            )
+            await reload()
+          } else {
+            toast.success(`Invoice ${sendInvoice.invoiceNo} resent to ${emailForm.to}`)
+          }
+          setSendInvoice(null)
+          return
         }
-      } else {
-        updateInvoice(sendInvoice.id, { status: 'Sent' })
-        toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
+        if (api) {
+          const res = await apiSendInvoice(sendInvoice.id, emailForm)
+          await reload()
+          if (res.emailSent) {
+            toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
+          } else {
+            toast.warning(
+              res.message ??
+                `Invoice marked Sent; email not delivered (configure Settings → Email)`,
+            )
+          }
+        } else {
+          updateInvoice(sendInvoice.id, { status: 'Sent' })
+          toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
+        }
+        setSendInvoice(null)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : isResend ? 'Resend failed' : 'Send failed')
       }
-      setSendInvoice(null)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Send failed')
-    }
+    })
   }
 
   const handleDelete = async (invoice: Invoice) => {
@@ -439,35 +440,46 @@ export default function InvoicesPage() {
       status: form.status,
       lines: form.lines,
     }
-    try {
-      if (api) {
-        const body = {
-          branchId: form.branchId,
-          invoiceDate: form.invoiceDate,
-          poNumber: form.poNumber || undefined,
-          currencyCode: form.currency,
-          status: invoiceStatusToApi(isEdit ? form.status : 'Draft'),
-          lines: invoiceFormToApiLines(form.lines),
-        }
-        if (isEdit && editId) {
-          await apiUpdateInvoice(editId, body)
+    await runSave(async () => {
+      try {
+        if (api) {
+          const uniId =
+            form.lines
+              .map((l) => getStudent(l.studentId)?.universityId)
+              .find((id): id is string => Boolean(id)) ?? undefined
+          if (!uniId) {
+            toast.error('Selected students must have a registered university')
+            return
+          }
+          const body = {
+            branchId: form.branchId,
+            universityId: uniId,
+            invoiceDate: form.invoiceDate,
+            poNumber: form.poNumber || undefined,
+            currencyCode: form.currency,
+            status: invoiceStatusToApi(isEdit ? form.status : 'Draft'),
+            lines: invoiceFormToApiLines(form.lines),
+          }
+          if (isEdit && editId) {
+            await apiUpdateInvoice(editId, body)
+            toast.success('Invoice updated')
+          } else {
+            await apiCreateInvoice({ ...body, status: 'Draft' })
+            toast.success('Invoice created as Draft')
+          }
+          await reload()
+        } else if (isEdit && editId) {
+          updateInvoice(editId, payload)
           toast.success('Invoice updated')
         } else {
-          await apiCreateInvoice({ ...body, status: 'Draft' })
+          addInvoice({ ...payload, status: 'Draft' })
           toast.success('Invoice created as Draft')
         }
-        await reload()
-      } else if (isEdit && editId) {
-        updateInvoice(editId, payload)
-        toast.success('Invoice updated')
-      } else {
-        addInvoice({ ...payload, status: 'Draft' })
-        toast.success('Invoice created as Draft')
+        setDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const sumTuition = (row: Invoice) => row.lines.reduce((s, l) => s + l.tuitionFee, 0)
@@ -494,7 +506,7 @@ export default function InvoicesPage() {
       ),
     },
     ...(isSuperAdmin
-      ? [{ key: 'branch', header: 'Branch', cell: (row: Invoice) => getBranchName(row.branchId) }]
+      ? [{ key: 'branch', header: 'Branch', cell: (row: Invoice) => row.branchName || getBranchName(row.branchId) }]
       : []),
     { key: 'university', header: 'University', cell: (row) => getInvoiceUniversities(row, getStudent) },
     {
@@ -846,8 +858,12 @@ export default function InvoicesPage() {
             </Card>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={() => void handleSave()}>{isEdit ? 'Save Changes' : 'Save as Draft'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSave()} loading={saving}>
+                {isEdit ? 'Save Changes' : 'Save as Draft'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -973,8 +989,10 @@ export default function InvoicesPage() {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setSendInvoice(null)}>Cancel</Button>
-              <Button onClick={() => void handleSend()}>
+              <Button variant="outline" onClick={() => setSendInvoice(null)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSend()} loading={sending}>
                 <Send className="mr-1.5 h-4 w-4" /> {isResend ? 'Resend' : 'Send'}
               </Button>
             </div>

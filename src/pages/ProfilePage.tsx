@@ -13,9 +13,10 @@ import { isApiMode } from '@/lib/api-client'
 import { displayRoleLabel } from '@/lib/api-auth-types'
 import { changeMyPassword, updateMyProfile } from '@/lib/profile-api'
 import { useCurrentUser } from '@/hooks/useAuth'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { useAuthStore } from '@/store/auth-store'
 import { useDataStore } from '@/store/data-store'
-import { Loader2, UserRound } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -29,12 +30,12 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(apiUser?.phone ?? '')
-  const [busyProfile, setBusyProfile] = useState(false)
+  const { submitting: savingProfile, runSubmit: runSaveProfile } = useSubmitState()
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [busyPassword, setBusyPassword] = useState(false)
+  const { submitting: savingPassword, runSubmit: runSavePassword } = useSubmitState()
 
   useEffect(() => {
     setFullName(user?.name ?? '')
@@ -56,28 +57,27 @@ export default function ProfilePage() {
       toast.error('Email is required')
       return
     }
-    setBusyProfile(true)
-    try {
-      if (api) {
-        const res = await updateMyProfile({
-          fullName: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim() || null,
-        })
-        setApiUser(res.user)
-        toast.success('Profile updated')
-      } else if (user) {
-        updateUser(user.id, {
-          name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-        })
-        toast.success('Profile updated (local)')
+    await runSaveProfile(async () => {
+      try {
+        if (api) {
+          const res = await updateMyProfile({
+            fullName: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            phone: phone.trim() || null,
+          })
+          setApiUser(res.user)
+          toast.success('Profile updated')
+        } else if (user) {
+          updateUser(user.id, {
+            name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+          })
+          toast.success('Profile updated (local)')
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Update failed')
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Update failed')
-    } finally {
-      setBusyProfile(false)
-    }
+    })
   }
 
   const savePassword = async () => {
@@ -93,28 +93,27 @@ export default function ProfilePage() {
       toast.error('New password and confirmation do not match')
       return
     }
-    setBusyPassword(true)
-    try {
-      if (api) {
-        const res = await changeMyPassword({
-          currentPassword,
-          newPassword,
-        })
-        toast.success(res.message ?? 'Password updated')
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
-      } else {
-        toast.success('Password updated (local demo — not persisted to server)')
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
+    await runSavePassword(async () => {
+      try {
+        if (api) {
+          const res = await changeMyPassword({
+            currentPassword,
+            newPassword,
+          })
+          toast.success(res.message ?? 'Password updated')
+          setCurrentPassword('')
+          setNewPassword('')
+          setConfirmPassword('')
+        } else {
+          toast.success('Password updated (local demo — not persisted to server)')
+          setCurrentPassword('')
+          setNewPassword('')
+          setConfirmPassword('')
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Password change failed')
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Password change failed')
-    } finally {
-      setBusyPassword(false)
-    }
+    })
   }
 
   return (
@@ -173,10 +172,7 @@ export default function ProfilePage() {
                 </p>
               ) : null}
             </div>
-            <Button disabled={busyProfile} onClick={() => void saveProfile()}>
-              {busyProfile ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
+            <Button loading={savingProfile} onClick={() => void saveProfile()}>
               Save profile
             </Button>
           </CardContent>
@@ -220,13 +216,7 @@ export default function ProfilePage() {
                 autoComplete="new-password"
               />
             </div>
-            <Button
-              disabled={busyPassword}
-              onClick={() => void savePassword()}
-            >
-              {busyPassword ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
+            <Button loading={savingPassword} onClick={() => void savePassword()}>
               Update password
             </Button>
           </CardContent>

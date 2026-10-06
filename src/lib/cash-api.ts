@@ -163,6 +163,7 @@ export function mapApiBankAccount(a: ApiBankAccountBalanced): BankAccount {
     branchId: a.branchId,
     currency: a.currencyCode as Currency,
     balance: Number(a.balance),
+    openingBalance: Number(a.openingBalance),
   }
 }
 

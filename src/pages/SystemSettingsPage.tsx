@@ -22,6 +22,7 @@ import {
   deletePettyCashCategory as apiDeletePettyCat,
   deleteUniversity as apiDeleteUniversity,
   listCountries,
+  listFxRates,
   listPettyCashCategories,
   listUniversities,
   mapApiTenantCountry,
@@ -29,11 +30,13 @@ import {
   updateCountry as apiUpdateCountry,
   updatePettyCashCategory as apiUpdatePettyCat,
   updateUniversity as apiUpdateUniversity,
+  upsertFxRate,
   type ApiCategory,
 } from '@/lib/masters-api'
 import type { Currency, TenantCountry, University } from '@/types'
 import { DEFAULT_INVOICE_BRANDING } from '@/store/settings-store'
 import { FileImage, Globe2, GraduationCap, Plus, Settings, Wallet } from 'lucide-react'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
@@ -95,25 +98,40 @@ export function SystemSettingsPage() {
   const [editCatName, setEditCatName] = useState<string | null>(null)
   const [editCatId, setEditCatId] = useState<string | null>(null)
   const [catName, setCatName] = useState('')
+  const { submitting, runSubmit } = useSubmitState()
   const api = isApiMode()
 
   const [apiUniversities, setApiUniversities] = useState<University[]>([])
   const [apiCountries, setApiCountries] = useState<TenantCountry[]>([])
   const [apiPettyCats, setApiPettyCats] = useState<ApiCategory[]>([])
   const [mastersLoading, setMastersLoading] = useState(api)
+  const [fxRates, setFxRates] = useState<
+    Array<{ id: string; currencyCode: string; rateToPkr: number; effectiveDate: string }>
+  >([])
+  const [fxDraft, setFxDraft] = useState({ currencyCode: 'GBP' as Currency, rateToPkr: '355', effectiveDate: new Date().toISOString().slice(0, 10) })
+  const { submitting: fxSubmitting, runSubmit: runFxSubmit } = useSubmitState()
 
   const loadMasters = useCallback(async () => {
     if (!api) return
     setMastersLoading(true)
     try {
-      const [unis, cats, countries] = await Promise.all([
+      const [unis, cats, countries, rates] = await Promise.all([
         listUniversities(),
         listPettyCashCategories(),
         listCountries(),
+        listFxRates(),
       ])
       setApiUniversities(unis.map(mapApiUniversity))
       setApiPettyCats(cats)
       setApiCountries(countries.map(mapApiTenantCountry))
+      setFxRates(
+        rates.map((r) => ({
+          id: r.id,
+          currencyCode: r.currencyCode,
+          rateToPkr: Number(r.rateToPkr),
+          effectiveDate: r.effectiveDate.slice(0, 10),
+        })),
+      )
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load masters')
     } finally {
@@ -222,27 +240,29 @@ export function SystemSettingsPage() {
       toast.error('Select a registered country')
       return
     }
-    try {
-      if (api) {
-        if (isEditUni && editUniId) {
-          await apiUpdateUniversity(editUniId, uniForm, countries)
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          if (isEditUni && editUniId) {
+            await apiUpdateUniversity(editUniId, uniForm, countries)
+            toast.success('University updated')
+          } else {
+            await apiCreateUniversity(uniForm, countries)
+            toast.success('University registered')
+          }
+          await loadMasters()
+        } else if (isEditUni && editUniId) {
+          updateUniversity(editUniId, uniForm)
           toast.success('University updated')
         } else {
-          await apiCreateUniversity(uniForm, countries)
+          addUniversity(uniForm)
           toast.success('University registered')
         }
-        await loadMasters()
-      } else if (isEditUni && editUniId) {
-        updateUniversity(editUniId, uniForm)
-        toast.success('University updated')
-      } else {
-        addUniversity(uniForm)
-        toast.success('University registered')
+        setUniDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setUniDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const openAddCountry = () => {
@@ -281,23 +301,25 @@ export function SystemSettingsPage() {
       toast.error('Countries can only be managed in API mode')
       return
     }
-    try {
-      const body = {
-        name: countryForm.name.trim(),
-        isoCode: countryForm.isoCode.trim() || null,
+    await runSubmit(async () => {
+      try {
+        const body = {
+          name: countryForm.name.trim(),
+          isoCode: countryForm.isoCode.trim() || null,
+        }
+        if (isEditCountry && editCountryId) {
+          await apiUpdateCountry(editCountryId, body)
+          toast.success('Country updated')
+        } else {
+          await apiCreateCountry(body)
+          toast.success('Country registered')
+        }
+        await loadMasters()
+        setCountryDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      if (isEditCountry && editCountryId) {
-        await apiUpdateCountry(editCountryId, body)
-        toast.success('Country updated')
-      } else {
-        await apiCreateCountry(body)
-        toast.success('Country registered')
-      }
-      await loadMasters()
-      setCountryDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const openAddCategory = () => {
@@ -340,37 +362,39 @@ export function SystemSettingsPage() {
       toast.error('Category name is required')
       return
     }
-    try {
-      if (api) {
-        if (isEditCat && editCatId) {
-          await apiUpdatePettyCat(editCatId, name)
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          if (isEditCat && editCatId) {
+            await apiUpdatePettyCat(editCatId, name)
+            toast.success('Category updated')
+          } else {
+            await apiCreatePettyCat(name)
+            toast.success('Category added')
+          }
+          await loadMasters()
+        } else if (isEditCat && editCatName) {
+          const ok = updatePettyCashCategory(editCatName, name)
+          if (!ok) {
+            toast.error('Category already exists or name is invalid')
+            return
+          }
+          logAudit({ module: 'Settings', action: 'Updated petty cash category', details: `${editCatName} → ${name}` })
           toast.success('Category updated')
         } else {
-          await apiCreatePettyCat(name)
+          const ok = addPettyCashCategory(name)
+          if (!ok) {
+            toast.error('Category already exists or name is invalid')
+            return
+          }
+          logAudit({ module: 'Settings', action: 'Added petty cash category', details: name })
           toast.success('Category added')
         }
-        await loadMasters()
-      } else if (isEditCat && editCatName) {
-        const ok = updatePettyCashCategory(editCatName, name)
-        if (!ok) {
-          toast.error('Category already exists or name is invalid')
-          return
-        }
-        logAudit({ module: 'Settings', action: 'Updated petty cash category', details: `${editCatName} → ${name}` })
-        toast.success('Category updated')
-      } else {
-        const ok = addPettyCashCategory(name)
-        if (!ok) {
-          toast.error('Category already exists or name is invalid')
-          return
-        }
-        logAudit({ module: 'Settings', action: 'Added petty cash category', details: name })
-        toast.success('Category added')
+        setCatDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setCatDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const handleSave = async () => {
@@ -380,9 +404,10 @@ export function SystemSettingsPage() {
       return
     }
     const nextOrg = orgNameDraft.trim()
-    try {
-      if (api) {
-        const s = await patchSettings({
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          const s = await patchSettings({
           whtRatePercent: rate,
           enabledCurrencies,
           fiscalPeriodLockedUntil,
@@ -409,12 +434,13 @@ export function SystemSettingsPage() {
         action: 'Updated system settings',
         details: `WHT ${rate}%; org ${nextOrg || '(empty)'}`,
       })
-      toast.success('Settings saved', {
-        description: `WHT ${rate}%, invoice branding updated for this organisation.`,
-      })
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+        toast.success('Settings saved', {
+          description: `WHT ${rate}%, invoice branding updated for this organisation.`,
+        })
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
+    })
   }
 
   const handleLogoUpload = async (file: File | undefined) => {
@@ -466,7 +492,9 @@ export function SystemSettingsPage() {
             : 'Universities, petty cash categories, tax defaults, and currencies'
         }
       >
-        <Button onClick={() => void handleSave()}>Save Changes</Button>
+        <Button onClick={() => void handleSave()} loading={submitting}>
+          Save Changes
+        </Button>
       </PageHeader>
 
       <Tabs defaultValue="universities">
@@ -846,6 +874,114 @@ export function SystemSettingsPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle className="text-base">Exchange Rates (to PKR)</CardTitle>
+                <CardDescription>
+                  Dated FX rates used for commission and remittance PKR reporting. Historical rows keep their rate.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {api ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <div className="space-y-2">
+                        <Label>Currency</Label>
+                        <Select
+                          value={fxDraft.currencyCode}
+                          onValueChange={(v) => setFxDraft((p) => ({ ...p, currencyCode: v as Currency }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALL_CURRENCIES.filter((c) => c !== 'PKR').map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Rate to PKR</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={fxDraft.rateToPkr}
+                          onChange={(e) => setFxDraft((p) => ({ ...p, rateToPkr: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Effective date</Label>
+                        <Input
+                          type="date"
+                          value={fxDraft.effectiveDate}
+                          onChange={(e) => setFxDraft((p) => ({ ...p, effectiveDate: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          loading={fxSubmitting}
+                          onClick={() =>
+                            void runFxSubmit(async () => {
+                              const rate = Number(fxDraft.rateToPkr)
+                              if (!Number.isFinite(rate) || rate <= 0) {
+                                toast.error('Enter a valid FX rate')
+                                return
+                              }
+                              try {
+                                await upsertFxRate({
+                                  currencyCode: fxDraft.currencyCode,
+                                  rateToPkr: rate,
+                                  effectiveDate: fxDraft.effectiveDate,
+                                })
+                                toast.success(`${fxDraft.currencyCode} rate saved`)
+                                await loadMasters()
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : 'Failed to save FX rate')
+                              }
+                            })
+                          }
+                        >
+                          Save rate
+                        </Button>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Currency</TableHead>
+                          <TableHead className="text-right">Rate to PKR</TableHead>
+                          <TableHead>Effective</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {fxRates.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-muted-foreground">
+                              No rates yet — defaults apply until you save one.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          fxRates.slice(0, 12).map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="font-medium">{r.currencyCode}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.rateToPkr}</TableCell>
+                              <TableCell>{r.effectiveDate}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">FX rates require API mode.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="text-base">Fiscal Period Lock</CardTitle>
                 <CardDescription>Transactions on or before this date cannot be created or edited</CardDescription>
               </CardHeader>
@@ -919,7 +1055,7 @@ export function SystemSettingsPage() {
                 />
               </div>
             </div>
-            <Button className="w-full" onClick={() => void handleSaveUniversity()}>
+            <Button className="w-full" onClick={() => void handleSaveUniversity()} loading={submitting}>
               {isEditUni ? 'Update' : 'Register'}
             </Button>
           </div>
@@ -936,7 +1072,7 @@ export function SystemSettingsPage() {
               <Label>Category Name</Label>
               <Input value={catName} onChange={(e) => setCatName(e.target.value)} />
             </div>
-            <Button className="w-full" onClick={() => void handleSaveCategory()}>
+            <Button className="w-full" onClick={() => void handleSaveCategory()} loading={submitting}>
               {isEditCat ? 'Update' : 'Add'}
             </Button>
           </div>
@@ -966,7 +1102,7 @@ export function SystemSettingsPage() {
                 maxLength={2}
               />
             </div>
-            <Button className="w-full" onClick={() => void handleSaveCountry()}>
+            <Button className="w-full" onClick={() => void handleSaveCountry()} loading={submitting}>
               {isEditCountry ? 'Update' : 'Add'}
             </Button>
           </div>

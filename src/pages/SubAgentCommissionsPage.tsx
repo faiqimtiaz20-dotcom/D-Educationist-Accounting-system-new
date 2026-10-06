@@ -14,7 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getBranchName } from '@/lib/org'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { usePayablesApiSync } from '@/hooks/usePayablesApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { calcWHT, formatCurrency, subAgentPayable } from '@/lib/calculations'
+import { getInvoiceLineTotal, getInvoiceTotal } from '@/lib/invoice'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import {
   createCommission as apiCreateCommission,
@@ -64,6 +66,7 @@ export default function SubAgentCommissionsPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyCommission)
+  const { submitting, runSubmit } = useSubmitState()
 
   const netPreview = subAgentPayable(form.grossFee, form.rateGiven, form.exchangeRate, form.followOnBonus)
 
@@ -114,13 +117,17 @@ export default function SubAgentCommissionsPage() {
       return
     }
     const firstLine = invoice.lines?.[0]
+    // Gross fee base = commission earned (not tuition), so sub-agent % is of our income
+    const commissionBase = firstLine
+      ? getInvoiceLineTotal(firstLine)
+      : getInvoiceTotal(invoice)
     setForm((p) => ({
       ...p,
       invoiceId,
       studentId: firstLine?.studentId ?? '',
       branchId: invoice.branchId,
       currency: invoice.currency,
-      grossFee: firstLine?.tuitionFee ?? 0,
+      grossFee: commissionBase,
     }))
   }
 
@@ -147,9 +154,9 @@ export default function SubAgentCommissionsPage() {
       status: form.status,
     }
 
-    if (isEdit && editId) {
-      void (async () => {
-        try {
+    void runSubmit(async () => {
+      try {
+        if (isEdit && editId) {
           if (api) {
             await apiUpdateCommission(editId, {
               grossFee: payload.grossFee,
@@ -164,14 +171,7 @@ export default function SubAgentCommissionsPage() {
             updateSubAgentCommission(editId, payload)
           }
           toast.success('Commission updated')
-          setDialogOpen(false)
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Save failed')
-        }
-      })()
-    } else {
-      void (async () => {
-        try {
+        } else {
           if (api) {
             await apiCreateCommission({
               subAgentId: payload.subAgentId,
@@ -190,12 +190,12 @@ export default function SubAgentCommissionsPage() {
             addSubAgentCommission(payload)
           }
           toast.success('Commission created')
-          setDialogOpen(false)
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Save failed')
         }
-      })()
-    }
+        setDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
+      }
+    })
   }
 
   const statusPills = useMemo(() => [
@@ -242,7 +242,7 @@ export default function SubAgentCommissionsPage() {
     { key: 'branch', header: 'Branch', cell: (r) => r.branchName || getBranchName(r.branchId) },
     {
       key: 'grossFee',
-      header: 'Gross Fee',
+      header: 'Commission Base',
       cell: (r) => formatCurrency(r.grossFee, r.currency),
       className: 'text-right',
     },
@@ -381,7 +381,7 @@ export default function SubAgentCommissionsPage() {
                             setForm((p) => ({
                               ...p,
                               studentId: v,
-                              grossFee: line?.tuitionFee ?? p.grossFee,
+                              grossFee: line ? getInvoiceLineTotal(line) : p.grossFee,
                             }))
                           }}
                         >
@@ -414,8 +414,11 @@ export default function SubAgentCommissionsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Gross Fee ({form.currency})</Label>
+                <Label>Commission earned / base ({form.currency})</Label>
                 <Input type="number" min={0} step="0.01" value={form.grossFee || ''} onChange={(e) => setForm((p) => ({ ...p, grossFee: Number(e.target.value) }))} />
+                <p className="text-xs text-muted-foreground">
+                  Auto-filled from invoice commission (not tuition). Sub-agent % applies to this amount.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Rate Given (%)</Label>
@@ -462,8 +465,12 @@ export default function SubAgentCommissionsPage() {
             </Card>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>{isEdit ? 'Save Changes' : 'Create Commission'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save Changes' : 'Create Commission'}
+              </Button>
             </div>
           </div>
         </DialogContent>

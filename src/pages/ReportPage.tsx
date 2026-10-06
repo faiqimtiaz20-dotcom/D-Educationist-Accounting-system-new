@@ -14,7 +14,7 @@ import {
   type ApiReportPayload,
   type ReportRow,
 } from '@/lib/reports-api'
-import { FileSpreadsheet, FileText, Loader2, Printer } from 'lucide-react'
+import { Loader2, Printer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -148,8 +148,8 @@ export function ReportPage() {
     }))
   }, [apiData])
 
-  const handleExport = async (format: 'PDF' | 'Excel' | 'CSV') => {
-    if (api && format === 'CSV' && slug) {
+  const handleExport = async () => {
+    if (api && slug) {
       try {
         await downloadReportCsv(slug, {
           branchId: effectiveBranchId !== 'all' ? effectiveBranchId : undefined,
@@ -160,13 +160,7 @@ export function ReportPage() {
       }
       return
     }
-    if (api && (format === 'PDF' || format === 'Excel')) {
-      toast.message(`${format} export is not available yet`, {
-        description: 'Use CSV export for this report.',
-      })
-      return
-    }
-    toast.success(`${format} export started`, {
+    toast.success('CSV export started', {
       description: `${report?.title ?? 'Report'} will download shortly.`,
     })
   }
@@ -195,13 +189,7 @@ export function ReportPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={title} subtitle={subtitle} backTo="/reports">
-        <Button variant="outline" size="sm" onClick={() => handleExport('PDF')}>
-          <FileText className="mr-1.5 h-4 w-4" /> PDF
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExport('Excel')}>
-          <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Excel
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExport('CSV')}>
+        <Button variant="outline" size="sm" onClick={() => void handleExport()}>
           <Printer className="mr-1.5 h-4 w-4" /> CSV
         </Button>
       </PageHeader>

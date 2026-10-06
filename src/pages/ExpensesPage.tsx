@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getBranchName } from '@/lib/org'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency, pettyCashTotal } from '@/lib/calculations'
 import {
   approveExpense as apiApproveExpense,
@@ -76,6 +77,7 @@ export default function ExpensesPage() {
     branchId: defaultBranchId,
     category: categories[0] ?? emptyForm.category,
   })
+  const { submitting, runSubmit } = useSubmitState()
 
   const statusPills = useMemo(() => [
     { label: 'All', value: 'all', count: filtered.length },
@@ -200,7 +202,7 @@ export default function ExpensesPage() {
       chequeNo: form.paymentMode === 'Cheque' ? form.chequeNo.trim() : undefined,
     }
 
-    void (async () => {
+    void runSubmit(async () => {
       try {
         if (api) {
           const cat = expenseCategories.find((c) => c.name === form.category)
@@ -250,7 +252,7 @@ export default function ExpensesPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   const columns: Column<Expense>[] = [
@@ -424,8 +426,12 @@ export default function ExpensesPage() {
               <p className="text-lg font-bold">{formatCurrency(computedTotal)}</p>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>{isEdit ? 'Save Changes' : 'Add Expense'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save Changes' : 'Add Expense'}
+              </Button>
             </div>
           </div>
         </DialogContent>

@@ -39,6 +39,7 @@ export type ApiInvoice = {
   status: string
   exchangeRate: string | number | null
   notes: string | null
+  branch?: { id: string; code: string; name: string } | null
   lines: Array<{
     id: string
     studentId: string
@@ -58,6 +59,7 @@ export type ApiOtherInvoice = {
   billTo: string
   category: string
   currencyCode: string
+  branch?: { id: string; code: string; name: string } | null
   status: OtherInvoiceStatus
   notes: string | null
   lines: Array<{
@@ -102,6 +104,7 @@ export function mapApiInvoice(inv: ApiInvoice): Invoice {
     id: inv.id,
     invoiceNo: inv.invoiceNo,
     branchId: inv.branchId,
+    branchName: inv.branch?.name,
     invoiceDate: toDateOnly(inv.invoiceDate),
     poNumber: inv.poNumber ?? undefined,
     currency: inv.currencyCode as Currency,
@@ -122,6 +125,7 @@ export function mapApiOtherInvoice(inv: ApiOtherInvoice): OtherInvoice {
     id: inv.id,
     invoiceNo: inv.invoiceNo,
     branchId: inv.branchId,
+    branchName: inv.branch?.name,
     invoiceDate: toDateOnly(inv.invoiceDate),
     billTo: inv.billTo,
     category: inv.category,

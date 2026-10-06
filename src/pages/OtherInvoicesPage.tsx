@@ -16,10 +16,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { getBranchName } from '@/data'
+import { getBranchName } from '@/lib/org'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCurrentUser } from '@/hooks/useAuth'
 import { useModulePermission } from '@/hooks/usePermission'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency } from '@/lib/calculations'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import { getOtherInvoiceLineTotal, getOtherInvoiceTotal } from '@/lib/other-invoice'
@@ -88,6 +89,7 @@ export default function OtherInvoicesPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [previewInvoice, setPreviewInvoice] = useState<OtherInvoice | null>(null)
   const [form, setForm] = useState(() => emptyForm(defaultBranch))
+  const { submitting, runSubmit } = useSubmitState()
 
   const filtered = useMemo(() => {
     if (activeStatus === 'all') return branchInvoices
@@ -133,30 +135,35 @@ export default function OtherInvoicesPage() {
     setDialogOpen(true)
   }
 
-  const handleSend = async (invoice: OtherInvoice) => {
+  const handleSend = async (invoice: OtherInvoice): Promise<boolean> => {
     if (!canWrite) {
       toast.error('You do not have permission to send invoices')
-      return
+      return false
     }
     if (invoice.status !== 'Draft') {
       toast.error('Only draft invoices can be sent')
-      return
+      return false
     }
     if (isDateLocked(invoice.invoiceDate)) {
       toast.error('This period is locked — cannot post to a closed fiscal period')
-      return
+      return false
     }
-    try {
-      if (api) {
-        await apiUpdateOther(invoice.id, { status: 'Sent' })
-        await reload()
-      } else {
-        updateOtherInvoice(invoice.id, { status: 'Sent' })
+    const result = await runSubmit(async () => {
+      try {
+        if (api) {
+          await apiUpdateOther(invoice.id, { status: 'Sent' })
+          await reload()
+        } else {
+          updateOtherInvoice(invoice.id, { status: 'Sent' })
+        }
+        toast.success(`Invoice ${invoice.invoiceNo} marked as Sent`)
+        return true
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Send failed')
+        return false
       }
-      toast.success(`Invoice ${invoice.invoiceNo} marked as Sent`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Send failed')
-    }
+    })
+    return result === true
   }
 
   const handleDelete = async (invoice: OtherInvoice) => {
@@ -240,7 +247,7 @@ export default function OtherInvoicesPage() {
       lines: form.lines,
     }
 
-    void (async () => {
+    void runSubmit(async () => {
       try {
         if (api) {
           const body = {
@@ -272,7 +279,7 @@ export default function OtherInvoicesPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   const columns: Column<OtherInvoice>[] = [
@@ -290,7 +297,7 @@ export default function OtherInvoicesPage() {
     { key: 'billTo', header: 'Bill To', cell: (row) => row.billTo },
     { key: 'category', header: 'Category', cell: (row) => row.category },
     ...(isSuperAdmin
-      ? [{ key: 'branch', header: 'Branch', cell: (row: OtherInvoice) => getBranchName(row.branchId) }]
+      ? [{ key: 'branch', header: 'Branch', cell: (row: OtherInvoice) => row.branchName || getBranchName(row.branchId) }]
       : []),
     { key: 'currency', header: 'Currency', cell: (row) => row.currency },
     {
@@ -320,7 +327,14 @@ export default function OtherInvoicesPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {canWrite && row.status === 'Draft' && (
-              <DropdownMenuItem className="text-primary" onClick={() => handleSend(row)}>
+              <DropdownMenuItem
+                className="text-primary"
+                disabled={submitting}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  void handleSend(row)
+                }}
+              >
                 <Send /> Mark as Sent
               </DropdownMenuItem>
             )}
@@ -561,10 +575,12 @@ export default function OtherInvoicesPage() {
             </Card>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button onClick={handleSave}>{isEdit ? 'Save Changes' : 'Save as Draft'}</Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save Changes' : 'Save as Draft'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -632,15 +648,17 @@ export default function OtherInvoicesPage() {
                 {canWrite && previewInvoice.status === 'Draft' && (
                   <Button
                     variant="outline"
+                    loading={submitting}
                     onClick={() => {
-                      handleSend(previewInvoice)
-                      setPreviewInvoice(null)
+                      void (async () => {
+                        const ok = await handleSend(previewInvoice)
+                        if (ok) setPreviewInvoice(null)
+                      })()
                     }}
                   >
                     <Send className="mr-1.5 h-4 w-4" /> Mark as Sent
                   </Button>
                 )}
-                <Button onClick={() => toast.success('PDF export started')}>Export PDF</Button>
               </div>
             </div>
           )}

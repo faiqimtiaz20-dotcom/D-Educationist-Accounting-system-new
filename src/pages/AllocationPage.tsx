@@ -11,6 +11,7 @@ import { bankAccounts as mockBankAccounts } from '@/data'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useModulePermission } from '@/hooks/usePermission'
 import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { calcWHT, formatCurrency, grossPKR, netPKR } from '@/lib/calculations'
 import { useDataStore } from '@/store/data-store'
 import { allocateReceivable } from '@/lib/revenue-api'
@@ -32,6 +33,7 @@ export default function AllocationPage() {
     (r) => r.isBulkRemittance && r.allocationStatus !== 'allocated'
   )
   const [selectedReceivableId, setSelectedReceivableId] = useState(bulkReceivables[0]?.id ?? '')
+  const { submitting, runSubmit } = useSubmitState()
 
   const bulkReceivable = receivables.find((r) => r.id === selectedReceivableId)
   const branchInvoices = useBranchFilter(invoices)
@@ -95,7 +97,7 @@ export default function AllocationPage() {
       toast.error('Allocated total must equal remittance amount')
       return
     }
-    void (async () => {
+    void runSubmit(async () => {
       try {
         if (api) {
           await allocateReceivable(
@@ -118,7 +120,7 @@ export default function AllocationPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Allocation failed')
       }
-    })()
+    })
   }
 
   if (bulkReceivables.length === 0) {
@@ -232,7 +234,11 @@ export default function AllocationPage() {
               </div>
               {canWrite && (
                 <div className="mt-4 flex justify-end">
-                  <Button disabled={Math.abs(remaining) > 0.001} onClick={handleConfirm}>
+                  <Button
+                    disabled={Math.abs(remaining) > 0.001}
+                    loading={submitting}
+                    onClick={handleConfirm}
+                  >
                     <CheckCircle2 className="mr-1 h-4 w-4" />
                     Confirm Allocation
                   </Button>

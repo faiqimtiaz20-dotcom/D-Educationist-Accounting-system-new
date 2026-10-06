@@ -14,6 +14,7 @@ import {
   mapApiDocument,
   uploadDocument,
 } from '@/lib/operations-api'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { cn } from '@/lib/utils'
 import type { Document } from '@/types'
 import { Download, FileText, Grid3X3, List, Search, Trash2, Upload } from 'lucide-react'
@@ -164,6 +165,7 @@ export default function DocumentsPage() {
   const [search, setSearch] = useState('')
   const [docs, setDocs] = useState<Document[]>(() => (isApiMode() ? [] : mockDocuments))
   const [loading, setLoading] = useState(api)
+  const { submitting: uploading, runSubmit: runUpload } = useSubmitState()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const reload = useCallback(async () => {
@@ -197,23 +199,24 @@ export default function DocumentsPage() {
 
   const handleUpload = async (file: File | undefined) => {
     if (!file || !api) return
-    try {
-      // Demo link: attach to a synthetic uuid if no selection UI yet
-      const linkedId = crypto.randomUUID()
-      await uploadDocument({
-        file,
-        name: file.name,
-        docType: 'Bill',
-        linkedType: 'Manual',
-        linkedId,
-      })
-      await reload()
-      toast.success('Document uploaded (local disk storage)')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      if (fileRef.current) fileRef.current.value = ''
-    }
+    await runUpload(async () => {
+      try {
+        const linkedId = crypto.randomUUID()
+        await uploadDocument({
+          file,
+          name: file.name,
+          docType: 'Bill',
+          linkedType: 'Manual',
+          linkedId,
+        })
+        await reload()
+        toast.success('Document uploaded (local disk storage)')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload failed')
+      } finally {
+        if (fileRef.current) fileRef.current.value = ''
+      }
+    })
   }
 
   return (
@@ -259,7 +262,12 @@ export default function DocumentsPage() {
                 className="hidden"
                 onChange={(e) => void handleUpload(e.target.files?.[0])}
               />
-              <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+              <Button
+                size="sm"
+                variant="outline"
+                loading={uploading}
+                onClick={() => fileRef.current?.click()}
+              >
                 <Upload className="mr-1 h-4 w-4" />
                 Upload
               </Button>

@@ -71,6 +71,8 @@ export interface Student {
   consultantId: string
   country: string
   university: string
+  /** API university master id — used when creating invoices */
+  universityId?: string
   course: string
   intake: string
   group: string
@@ -95,6 +97,7 @@ export interface Invoice {
   id: string
   invoiceNo: string
   branchId: string
+  branchName?: string
   invoiceDate: string
   poNumber?: string
   currency: Currency
@@ -117,6 +120,7 @@ export interface OtherInvoice {
   id: string
   invoiceNo: string
   branchId: string
+  branchName?: string
   invoiceDate: string
   billTo: string
   /** Free-text category, e.g. Marketing, Services. */
@@ -297,6 +301,7 @@ export interface BankAccount {
   branchId: string
   currency: Currency
   balance: number
+  openingBalance?: number
 }
 
 export interface BankTransaction {
@@ -421,6 +426,7 @@ export interface AuditLog {
   module: string
   timestamp: string
   ip: string
+  entityType?: string
   entityId?: string
 }
 

@@ -1,13 +1,10 @@
 import { salaryTax } from '@/lib/calculations'
 import type { PayrollEmployee, PayrollLine, Reimbursement } from '@/types'
 
-/** Portion of gross salary exempt from tax before applying Pakistan slabs. */
-const TAX_EXEMPT_RATE = 0.1
-
+/** Gross monthly → monthly tax / net using FBR TY 2026-27 annual slabs. */
 export function computeSalary(basicSalary: number, allowances: number) {
-  const gross = basicSalary + allowances
-  const taxableMonthly = gross * (1 - TAX_EXEMPT_RATE)
-  const annualTax = salaryTax(taxableMonthly * 12)
+  const gross = Math.round((basicSalary + allowances) * 100) / 100
+  const annualTax = salaryTax(gross * 12)
   const monthlyTax = Math.round(annualTax / 12)
   const netSalary = Math.round(gross - monthlyTax)
   return { gross, salaryTax: monthlyTax, netSalary }

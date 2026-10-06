@@ -41,10 +41,20 @@ export function subAgentPayable(
   return netPKR(gross)
 }
 
-export function salaryTax(grossSalary: number): number {
-  if (grossSalary <= 600000) return grossSalary * 0.025
-  if (grossSalary <= 1200000) return grossSalary * 0.075
-  return grossSalary * 0.125
+/**
+ * Annual salary income tax — FBR salaried slabs TY 2026-27 (Finance Act 2026).
+ * `annualTaxable` is annual taxable salary in PKR (no further exemption applied here).
+ */
+export function salaryTax(annualTaxable: number): number {
+  const income = Math.max(0, annualTaxable)
+  if (income <= 600_000) return 0
+  if (income <= 1_200_000) return Math.round((income - 600_000) * 0.01)
+  if (income <= 2_200_000) return Math.round(6_000 + (income - 1_200_000) * 0.11)
+  if (income <= 3_200_000) return Math.round(116_000 + (income - 2_200_000) * 0.2)
+  if (income <= 4_100_000) return Math.round(316_000 + (income - 3_200_000) * 0.25)
+  if (income <= 5_600_000) return Math.round(541_000 + (income - 4_100_000) * 0.29)
+  if (income <= 7_000_000) return Math.round(976_000 + (income - 5_600_000) * 0.32)
+  return Math.round(1_424_000 + (income - 7_000_000) * 0.35)
 }
 
 export function formatCurrency(amount: number, currency = 'PKR'): string {

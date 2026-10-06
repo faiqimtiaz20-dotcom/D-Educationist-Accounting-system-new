@@ -12,6 +12,7 @@ import { contraEntries as mockContra } from '@/data'
 import { getBranchName } from '@/lib/org'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency } from '@/lib/calculations'
 import { createContraEntry } from '@/lib/cash-api'
 import { branchFilterOptions } from '@/lib/filter-options'
@@ -47,6 +48,7 @@ export default function ContraEntriesPage() {
     toBankAccountId: '',
     fromBankAccountId: '',
   })
+  const { submitting, runSubmit } = useSubmitState()
 
   const defaultBranchId =
     selectedBranchId === 'all'
@@ -87,7 +89,7 @@ export default function ContraEntriesPage() {
       toast.error('Amount must be greater than zero')
       return
     }
-    void (async () => {
+    void runSubmit(async () => {
       try {
         const contraType = TYPE_TO_API[form.type]
         await createContraEntry({
@@ -112,7 +114,7 @@ export default function ContraEntriesPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Create failed')
       }
-    })()
+    })
   }
 
   if (api && loading) return <PageDataSkeleton />
@@ -211,8 +213,12 @@ export default function ContraEntriesPage() {
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreate}>Post Contra</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} loading={submitting}>
+                Post Contra
+              </Button>
             </div>
           </div>
         </DialogContent>

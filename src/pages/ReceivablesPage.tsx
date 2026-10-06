@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { bankAccounts as mockBankAccounts } from '@/data'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { calcWHT, formatCurrency, grossPKR, netPKR } from '@/lib/calculations'
 import {
   getInvoiceOutstanding,
@@ -76,6 +77,7 @@ export default function ReceivablesPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyReceipt)
+  const { submitting, runSubmit } = useSubmitState()
 
   const selectedInvoice = invoices.find((i) => i.id === form.invoiceId)
   const outstanding = selectedInvoice
@@ -178,14 +180,14 @@ export default function ReceivablesPage() {
       notes: form.notes || undefined,
     }
 
-    if (isEdit && editId) {
-      updateReceivable(editId, payload)
-      toast.success('Receipt updated')
-      setDialogOpen(false)
-      return
-    }
+    void runSubmit(async () => {
+      if (isEdit && editId) {
+        updateReceivable(editId, payload)
+        toast.success('Receipt updated')
+        setDialogOpen(false)
+        return
+      }
 
-    void (async () => {
       try {
         if (api) {
           await apiCreateReceivable({
@@ -214,7 +216,7 @@ export default function ReceivablesPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   const columns: Column<ReceivableRow>[] = [
@@ -458,8 +460,12 @@ export default function ReceivablesPage() {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>{isEdit ? 'Save Changes' : 'Save Receipt'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save Changes' : 'Save Receipt'}
+              </Button>
             </div>
           </div>
         </DialogContent>

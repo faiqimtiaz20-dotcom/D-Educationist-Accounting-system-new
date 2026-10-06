@@ -19,6 +19,7 @@ import {
 } from '@/lib/settings-api'
 import { useDataStore } from '@/store/data-store'
 import type { Branch } from '@/types'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -54,6 +55,7 @@ export function BranchesSettingsPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyBranch())
+  const { submitting, runSubmit } = useSubmitState()
 
   const load = useCallback(async () => {
     if (!api) return
@@ -113,27 +115,29 @@ export function BranchesSettingsPage() {
       toast.error('Name and code are required')
       return
     }
-    try {
-      if (api) {
-        if (isEdit && editId) {
-          await updateBranch(editId, form)
+    await runSubmit(async () => {
+      try {
+        if (api) {
+          if (isEdit && editId) {
+            await updateBranch(editId, form)
+            toast.success('Branch updated')
+          } else {
+            await createBranch(form)
+            toast.success('Branch added')
+          }
+          await load()
+        } else if (isEdit && editId) {
+          updateStoreBranch(editId, form)
           toast.success('Branch updated')
         } else {
-          await createBranch(form)
+          addBranch(form)
           toast.success('Branch added')
         }
-        await load()
-      } else if (isEdit && editId) {
-        updateStoreBranch(editId, form)
-        toast.success('Branch updated')
-      } else {
-        addBranch(form)
-        toast.success('Branch added')
+        setDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-      setDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Save failed')
-    }
+    })
   }
 
   const columns: Column<Branch>[] = [
@@ -232,10 +236,12 @@ export function BranchesSettingsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button onClick={() => void handleSave()}>{isEdit ? 'Save' : 'Add Branch'}</Button>
+              <Button onClick={() => void handleSave()} loading={submitting}>
+                {isEdit ? 'Save' : 'Add Branch'}
+              </Button>
             </div>
           </div>
         </DialogContent>

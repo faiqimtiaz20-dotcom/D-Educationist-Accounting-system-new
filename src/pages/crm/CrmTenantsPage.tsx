@@ -27,6 +27,7 @@ import {
   type CrmTenantListItem,
   type TenantStatus,
 } from '@/lib/crm-api'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -58,7 +59,7 @@ export default function CrmTenantsPage() {
   const [rows, setRows] = useState<CrmTenantListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const { submitting: saving, runSubmit } = useSubmitState()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm())
 
@@ -96,31 +97,30 @@ export default function CrmTenantsPage() {
       toast.error('Tenant admin details are required')
       return
     }
-    setSaving(true)
-    try {
-      const result = await createCrmTenant({
-        code: form.code.trim().toUpperCase(),
-        name: form.name.trim(),
-        status: form.status,
-        adminEmail: form.adminEmail.trim().toLowerCase(),
-        adminPassword: form.adminPassword,
-        adminFullName: form.adminFullName.trim(),
-        branchCity: form.branchCity.trim() || 'Karachi',
-        orgName: form.orgName.trim() || form.name.trim(),
-      })
-      toast.success(
-        `Tenant ${result.tenant.code} created` +
-          (result.limitsEnforced === false
-            ? ' (status-only billing; no seat caps)'
-            : ''),
-      )
-      setDialogOpen(false)
-      await load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Create failed')
-    } finally {
-      setSaving(false)
-    }
+    await runSubmit(async () => {
+      try {
+        const result = await createCrmTenant({
+          code: form.code.trim().toUpperCase(),
+          name: form.name.trim(),
+          status: form.status,
+          adminEmail: form.adminEmail.trim().toLowerCase(),
+          adminPassword: form.adminPassword,
+          adminFullName: form.adminFullName.trim(),
+          branchCity: form.branchCity.trim() || 'Karachi',
+          orgName: form.orgName.trim() || form.name.trim(),
+        })
+        toast.success(
+          `Tenant ${result.tenant.code} created` +
+            (result.limitsEnforced === false
+              ? ' (status-only billing; no seat caps)'
+              : ''),
+        )
+        setDialogOpen(false)
+        await load()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Create failed')
+      }
+    })
   }
 
   const toggleStatus = async (row: CrmTenantListItem) => {
@@ -353,15 +353,8 @@ export default function CrmTenantsPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : (
-                  'Create tenant'
-                )}
+              <Button type="submit" loading={saving}>
+                Create tenant
               </Button>
             </div>
           </form>

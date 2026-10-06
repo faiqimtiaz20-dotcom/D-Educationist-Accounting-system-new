@@ -19,6 +19,10 @@ function AuthHydrator({ children }: { children: React.ReactNode }) {
     setUnauthorizedHandler(() => {
       void logout()
       toast.error('Session expired. Please sign in again.')
+      // Hard navigate so hung skeletons / in-flight pages clear immediately
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login')
+      }
     })
     return () => setUnauthorizedHandler(null)
   }, [logout])

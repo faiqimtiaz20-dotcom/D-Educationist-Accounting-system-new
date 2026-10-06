@@ -16,13 +16,27 @@ import { FileCheck, Receipt, Scale, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
-const DEFAULT_PERIOD = '2026-09'
+function currentYm(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 function periodLabel(yyyyMm: string) {
   const [y, m] = yyyyMm.split('-').map(Number)
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   if (!y || !m || m < 1 || m > 12) return yyyyMm
   return `${months[m - 1]} ${y}`
+}
+
+/** Last N calendar months including current (YYYY-MM). */
+function recentPeriods(count = 8): string[] {
+  const out: string[] = []
+  const d = new Date()
+  d.setDate(1)
+  for (let i = 0; i < count; i++) {
+    out.push(currentYm(d))
+    d.setMonth(d.getMonth() - 1)
+  }
+  return out
 }
 
 function mapBranch(b: { id: string; name: string; code: string; city: string; isHeadOffice: boolean }): Branch {
@@ -37,7 +51,7 @@ function mapBranch(b: { id: string; name: string; code: string; city: string; is
 
 export default function TaxCompliancePage() {
   const api = isApiMode()
-  const [period, setPeriod] = useState(DEFAULT_PERIOD)
+  const [period, setPeriod] = useState(currentYm)
   const [summary, setSummary] = useState<ApiTaxSummary | null>(null)
   const [apiRecords, setApiRecords] = useState<TaxRecord[] | null>(null)
   const [loading, setLoading] = useState(api)
@@ -109,12 +123,11 @@ export default function TaxCompliancePage() {
 
   const periodOptions = useMemo(() => {
     if (api) {
-      return [
-        { label: periodLabel(period), value: period },
-        { label: 'Aug 2026', value: '2026-08' },
-        { label: 'Jul 2026', value: '2026-07' },
-        { label: 'Jun 2026', value: '2026-06' },
-      ]
+      const values = new Set(recentPeriods(8))
+      values.add(period)
+      return [...values]
+        .sort((a, b) => b.localeCompare(a))
+        .map((p) => ({ label: periodLabel(p), value: p }))
     }
     return [...new Set(filtered.map((r) => r.period))].map((p) => ({ label: p, value: p }))
   }, [api, period, filtered])

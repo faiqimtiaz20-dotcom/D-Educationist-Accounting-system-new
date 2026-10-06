@@ -10,9 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { dashboardMetrics } from '@/data'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency, pettyCashTotal } from '@/lib/calculations'
 import { createPettyCash as apiCreatePettyCash } from '@/lib/cash-api'
 import { branchFilterOptions } from '@/lib/filter-options'
@@ -20,11 +20,11 @@ import { useAppStore } from '@/store/app-store'
 import { useDataStore } from '@/store/data-store'
 import { useSettingsStore } from '@/store/settings-store'
 import type { PettyCashEntry } from '@/types'
-import { ArrowDownLeft, ArrowUpRight, Banknote, PiggyBank, Wallet } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Banknote, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 const emptyForm = {
-  branchId: 'khi',
+  branchId: '',
   date: new Date().toISOString().slice(0, 10),
   category: '',
   description: '',
@@ -52,7 +52,7 @@ export default function PettyCashPage() {
   const defaultCategory = categoryNames[0] ?? ''
   const defaultBranchId =
     selectedBranchId === 'all'
-      ? (branches.find((b) => b.code === 'KHI')?.id ?? branches[0]?.id ?? 'khi')
+      ? (branches.find((b) => b.isHeadOffice)?.id ?? branches[0]?.id ?? '')
       : selectedBranchId
 
   const filtered = useBranchFilter(pettyCash)
@@ -64,13 +64,19 @@ export default function PettyCashPage() {
     branchId: defaultBranchId,
     category: defaultCategory,
   })
+  const { submitting, runSubmit } = useSubmitState()
 
   const today = new Date().toISOString().slice(0, 10)
   const todayEntries = filtered.filter((e) => e.date === today)
   const cashIn = todayEntries.filter((e) => e.type === 'in').reduce((s, e) => s + e.total, 0)
   const cashOut = todayEntries.filter((e) => e.type === 'out').reduce((s, e) => s + e.total, 0)
-  const openingBalance = dashboardMetrics.pettyCashBalance - cashIn + cashOut
-  const closingBalance = openingBalance + cashIn - cashOut
+  // Live balance from entries (never mock demo metrics)
+  const closingBalance = useMemo(() => {
+    const inn = filtered.filter((e) => e.type === 'in').reduce((s, e) => s + e.total, 0)
+    const out = filtered.filter((e) => e.type === 'out').reduce((s, e) => s + e.total, 0)
+    return inn - out
+  }, [filtered])
+  const openingBalance = closingBalance - cashIn + cashOut
   const computedTotal = pettyCashTotal(form.principal, form.salesTax, form.srbSst, form.gst, form.incomeTax)
 
   const totalTax = useMemo(
@@ -86,6 +92,7 @@ export default function PettyCashPage() {
       branchId: defaultBranchId,
       date: today,
       category: defaultCategory,
+      type: closingBalance <= 0 ? 'in' : 'out',
     })
     setSheetOpen(true)
   }
@@ -127,6 +134,10 @@ export default function PettyCashPage() {
   }
 
   const handleSave = () => {
+    if (!form.branchId) {
+      toast.error('Branch is required')
+      return
+    }
     if (!form.category.trim()) {
       toast.error('Category is required')
       return
@@ -135,19 +146,25 @@ export default function PettyCashPage() {
       toast.error('Description is required')
       return
     }
-    if (form.principal <= 0 && form.type === 'out') {
+    if (form.principal <= 0) {
       toast.error('Principal must be greater than zero')
       return
     }
-
-    if (isEdit && editId) {
-      updatePettyCash(editId, form)
-      toast.success('Entry updated')
-      setSheetOpen(false)
+    if (form.type === 'out' && computedTotal > closingBalance + 1e-9) {
+      toast.error(
+        `Cash out ${formatCurrency(computedTotal)} exceeds available balance ${formatCurrency(closingBalance)}. Add a Cash In first.`,
+      )
       return
     }
 
-    void (async () => {
+    void runSubmit(async () => {
+      if (isEdit && editId) {
+        updatePettyCash(editId, form)
+        toast.success('Entry updated')
+        setSheetOpen(false)
+        return
+      }
+
       try {
         if (api) {
           const cat = pettyCategories.find((c) => c.name === form.category)
@@ -161,7 +178,7 @@ export default function PettyCashPage() {
             categoryId: cat.id,
             description: form.description,
             entryType: form.type,
-            principal: form.principal || computedTotal,
+            principal: form.principal,
             salesTax: form.salesTax,
             srbSst: form.srbSst,
             gst: form.gst,
@@ -176,7 +193,7 @@ export default function PettyCashPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   const columns: Column<PettyCashEntry>[] = [
@@ -197,17 +214,19 @@ export default function PettyCashPage() {
         </span>
       ),
     },
-    { key: 'principal', header: 'Principal', cell: (r) => formatCurrency(r.principal), className: 'text-right' },
-    { key: 'salesTax', header: 'Sales Tax', cell: (r) => formatCurrency(r.salesTax), className: 'text-right' },
-    { key: 'srbSst', header: 'SRB-SST', cell: (r) => formatCurrency(r.srbSst), className: 'text-right' },
-    { key: 'gst', header: 'GST', cell: (r) => formatCurrency(r.gst), className: 'text-right' },
-    { key: 'incomeTax', header: 'Income Tax', cell: (r) => formatCurrency(r.incomeTax ?? 0), className: 'text-right' },
-    { key: 'total', header: 'Total', cell: (r) => <span className="font-semibold">{formatCurrency(r.total)}</span>, className: 'text-right' },
+    {
+      key: 'total',
+      header: 'Total',
+      className: 'text-right font-mono',
+      cell: (r) => formatCurrency(r.total),
+    },
     {
       key: 'actions',
-      header: 'Actions',
-      cell: (row) =>
-        api ? null : <RowActions onEdit={() => openEdit(row)} onDelete={() => void handleDelete(row)} />,
+      header: '',
+      cell: (r) =>
+        api ? null : (
+          <RowActions onEdit={() => openEdit(r)} onDelete={() => void handleDelete(r)} />
+        ),
     },
   ]
 
@@ -215,98 +234,199 @@ export default function PettyCashPage() {
 
   return (
     <div>
-      <PageHeader title="Petty Cash" subtitle="Branch petty cash with tax breakdown" actionLabel="Add Entry" onAction={openAdd} />
+      <PageHeader
+        title="Petty Cash"
+        subtitle="Imprest float, cash in / out with tax breakdown"
+        actionLabel="Add Entry"
+        onAction={openAdd}
+      />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Petty Cash Balance" value={formatCurrency(dashboardMetrics.pettyCashBalance)} icon={Wallet} accent="green" />
-        <MetricCard title="Today's Cash In" value={formatCurrency(cashIn)} icon={ArrowDownLeft} accent="blue" />
-        <MetricCard title="Today's Cash Out" value={formatCurrency(cashOut)} icon={ArrowUpRight} accent="orange" />
-        <MetricCard title="Total Tax (Period)" value={formatCurrency(totalTax)} icon={Banknote} accent="purple" />
+        <MetricCard title="Petty Cash Balance" value={formatCurrency(closingBalance)} icon={Wallet} accent="green" />
+        <MetricCard title="Today Cash In" value={formatCurrency(cashIn)} icon={ArrowDownLeft} accent="blue" />
+        <MetricCard title="Today Cash Out" value={formatCurrency(cashOut)} icon={ArrowUpRight} accent="orange" />
+        <MetricCard title="Tax on Entries" value={formatCurrency(totalTax)} icon={Banknote} accent="purple" />
       </div>
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><PiggyBank className="h-4 w-4" /> Imprest Replenishment</CardTitle>
-            <CardDescription>Request top-up from Head Office</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2"><Label>Requested Amount</Label><Input type="number" defaultValue={50000} /></div>
-            <Button className="w-full" onClick={() => toast.success('Replenishment request submitted')}>Submit Replenishment Request</Button>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Daily Closing Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">Opening</p><p className="text-xl font-bold">{formatCurrency(openingBalance)}</p></div>
-              <div className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">Cash In</p><p className="text-xl font-bold text-emerald-600">+{formatCurrency(cashIn)}</p></div>
-              <div className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">Cash Out</p><p className="text-xl font-bold text-red-600">-{formatCurrency(cashOut)}</p></div>
-              <div className="rounded-lg border bg-primary/5 p-4"><p className="text-sm text-muted-foreground">Closing</p><p className="text-xl font-bold">{formatCurrency(closingBalance)}</p></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">Daily position</CardTitle>
+          <CardDescription>Opening / movement / closing for filtered branch scope</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">Opening</p>
+            <p className="text-xl font-bold">{formatCurrency(openingBalance)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">Net today</p>
+            <p className="text-xl font-bold">{formatCurrency(cashIn - cashOut)}</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm text-muted-foreground">Closing / available</p>
+            <p className="text-xl font-bold">{formatCurrency(closingBalance)}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {api && closingBalance <= 0 && (
+        <p className="mb-4 text-sm text-amber-700 dark:text-amber-400">
+          Available balance is {formatCurrency(0)}. Use <strong>Cash In</strong> (imprest top-up) before recording Cash Out.
+        </p>
+      )}
 
       <DataTable
         data={filtered}
         columns={columns}
-        searchPlaceholder="Search by category or description..."
-        searchFilter={(row, q) => row.category.toLowerCase().includes(q) || row.description.toLowerCase().includes(q)}
+        searchPlaceholder="Search petty cash..."
+        searchFilter={(row, q) =>
+          row.description.toLowerCase().includes(q) ||
+          row.category.toLowerCase().includes(q) ||
+          (row.pettyCashNo ?? '').toLowerCase().includes(q)
+        }
         filters={[
           { key: 'branch', label: 'Branch', type: 'select', options: branchFilterOptions, accessor: (r) => r.branchId },
-          { key: 'category', label: 'Category', type: 'select', options: categoryNames.map((c) => ({ label: c, value: c })), accessor: (r) => r.category },
-          { key: 'type', label: 'Type', type: 'select', options: [{ label: 'Cash In', value: 'in' }, { label: 'Cash Out', value: 'out' }], accessor: (r) => r.type },
+          {
+            key: 'type',
+            label: 'Type',
+            type: 'select',
+            options: [
+              { label: 'Cash In', value: 'in' },
+              { label: 'Cash Out', value: 'out' },
+            ],
+            accessor: (r) => r.type,
+          },
           { key: 'date', label: 'Date', type: 'dateRange', accessor: (r) => r.date },
-          { key: 'total', label: 'Total', type: 'numberRange', accessor: (r) => r.total },
+          { key: 'amount', label: 'Amount', type: 'numberRange', accessor: (r) => r.total },
         ]}
       />
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-y-auto sm:max-w-md">
           <SheetHeader>
             <SheetTitle>{isEdit ? 'Edit Entry' : 'Add Petty Cash Entry'}</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <Label>Type</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => setForm({ ...form, type: v as 'in' | 'out' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {[...new Set([...categoryNames, form.category].filter(Boolean))].map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem value="in">Cash In (top-up)</SelectItem>
+                  <SelectItem value="out">Cash Out</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Branch</Label>
+              <Select
+                value={form.branchId || undefined}
+                onValueChange={(v) => setForm({ ...form, branchId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select
+                value={form.category || undefined}
+                onValueChange={(v) => setForm({ ...form, category: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryNames.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as 'in' | 'out' })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="out">Cash Out (Expense)</SelectItem>
-                  <SelectItem value="in">Cash In (Replenishment)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Principal</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.principal || ''}
+                  onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sales Tax</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.salesTax || ''}
+                  onChange={(e) => setForm({ ...form, salesTax: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SRB-SST</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.srbSst || ''}
+                  onChange={(e) => setForm({ ...form, srbSst: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>GST</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.gst || ''}
+                  onChange={(e) => setForm({ ...form, gst: Number(e.target.value) })}
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2"><Label>Principal</Label><Input type="number" value={form.principal || ''} onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>Sales Tax</Label><Input type="number" value={form.salesTax || ''} onChange={(e) => setForm({ ...form, salesTax: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>SRB-SST</Label><Input type="number" value={form.srbSst || ''} onChange={(e) => setForm({ ...form, srbSst: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>GST</Label><Input type="number" value={form.gst || ''} onChange={(e) => setForm({ ...form, gst: Number(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>Income Tax</Label><Input type="number" value={form.incomeTax || ''} onChange={(e) => setForm({ ...form, incomeTax: Number(e.target.value) })} /></div>
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+              Total: <strong>{formatCurrency(computedTotal)}</strong>
+              {form.type === 'out' ? (
+                <span className="ml-2 text-muted-foreground">
+                  · Available {formatCurrency(closingBalance)}
+                </span>
+              ) : null}
             </div>
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="text-lg font-bold">{formatCurrency(computedTotal)}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save' : 'Add Entry'}
+              </Button>
             </div>
-            <Button className="w-full" onClick={handleSave}>{isEdit ? 'Save Changes' : 'Add Entry'}</Button>
           </div>
         </SheetContent>
       </Sheet>

@@ -10,9 +10,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { bankAccounts as mockBankAccounts, getBranchName } from '@/data'
+import { bankAccounts as mockBankAccounts } from '@/data'
+import { getBranchName } from '@/lib/org'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { usePayablesApiSync } from '@/hooks/usePayablesApiSync'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency, subAgentPayable } from '@/lib/calculations'
 import {
   createPayment as apiCreatePayment,
@@ -59,6 +61,7 @@ export default function SubAgentPaymentsPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyPayment)
+  const { submitting, runSubmit } = useSubmitState()
 
   const outstandingFor = (commissionId: string, excludeId?: string) => {
     const commission = filteredCommissions.find((c) => c.id === commissionId)
@@ -141,14 +144,14 @@ export default function SubAgentPaymentsPage() {
       currency: 'PKR' as const,
     }
 
-    if (isEdit && editId) {
-      updateSubAgentPayment(editId, payload)
-      toast.success('Payment updated')
-      setDialogOpen(false)
-      return
-    }
+    void runSubmit(async () => {
+      if (isEdit && editId) {
+        updateSubAgentPayment(editId, payload)
+        toast.success('Payment updated')
+        setDialogOpen(false)
+        return
+      }
 
-    void (async () => {
       try {
         if (api) {
           await apiCreatePayment({
@@ -168,7 +171,7 @@ export default function SubAgentPaymentsPage() {
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Save failed')
       }
-    })()
+    })
   }
 
   const handleDelete = async (row: SubAgentPayment) => {
@@ -371,8 +374,12 @@ export default function SubAgentPaymentsPage() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>{isEdit ? 'Save Changes' : 'Save Payment'}</Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} loading={submitting}>
+                {isEdit ? 'Save Changes' : 'Save Payment'}
+              </Button>
             </div>
           </div>
         </DialogContent>

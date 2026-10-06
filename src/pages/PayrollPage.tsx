@@ -14,12 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { branches } from '@/data'
+import { branches as mockBranches } from '@/data'
 import { getBranchName } from '@/lib/org'
+import { isApiMode } from '@/lib/api-client'
 import { useCurrentUser, useEffectiveBranchId } from '@/hooks/useAuth'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { usePayrollApiSync } from '@/hooks/usePayrollApiSync'
 import { useModulePermission } from '@/hooks/usePermission'
+import { useSubmitState } from '@/hooks/useSubmitState'
 import { computeSalary, currentPayrollPeriod, formatEmployeeCode, formatPayrollPeriod } from '@/lib/payroll'
 import {
   approveReimbursement,
@@ -50,7 +52,7 @@ const REIMBURSEMENT_TYPES = ['Travel', 'Fuel', 'Reimbursement', 'Advance Settlem
 
 const emptyEmployee = {
   name: '',
-  branchId: 'khi',
+  branchId: '',
   designation: '',
   basicSalary: 0,
   allowances: 0,
@@ -61,7 +63,7 @@ const emptyEmployee = {
 
 const emptyReimbursement = {
   employeeId: '',
-  branchId: 'khi',
+  branchId: '',
   type: 'Travel' as Reimbursement['type'],
   amount: 0,
   date: new Date().toISOString().slice(0, 10),
@@ -89,15 +91,28 @@ export default function PayrollPage() {
   const importPayrollRuns = useDataStore((s) => s.importPayrollRuns)
   const markPayrollPaid = useDataStore((s) => s.markPayrollPaid)
   const storeBranches = useDataStore((s) => s.branches)
+  const branches = storeBranches.length > 0
+    ? storeBranches
+    : isApiMode()
+      ? []
+      : mockBranches
 
   const employees = useBranchFilter(payrollEmployees.filter((e) => e.isActive))
   const branchRuns = useBranchFilter(runs)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const defaultBranchId = () => {
+    if (branchId !== 'all') return branchId
+    return (
+      branches.find((b) => b.isHeadOffice)?.id ??
+      branches[0]?.id ??
+      ''
+    )
+  }
+
   const resolveProcessBranchId = () => {
     if (branchId !== 'all') return branchId
-    const ho = (storeBranches.length ? storeBranches : branches).find((b) => b.isHeadOffice)
-    return ho?.id ?? branchId
+    return defaultBranchId() || branchId
   }
 
   const [period, setPeriod] = useState(currentPayrollPeriod())
@@ -112,6 +127,9 @@ export default function PayrollPage() {
 
   const [payslipRun, setPayslipRun] = useState<PayrollRun | null>(null)
   const [reimbStatus, setReimbStatus] = useState('all')
+  const { submitting: savingEmployee, runSubmit: runSaveEmployee } = useSubmitState()
+  const { submitting: processingPayroll, runSubmit: runProcessPayroll } = useSubmitState()
+  const { submitting: savingReimb, runSubmit: runSaveReimb } = useSubmitState()
 
   const previewLines = useMemo(() => {
     return employees.map((emp) => {
@@ -154,13 +172,7 @@ export default function PayrollPage() {
   const openAddEmployee = () => {
     setIsEditEmp(false)
     setEditEmpId(null)
-    const defaultBranch =
-      branchId === 'all'
-        ? (storeBranches.find((b) => b.code === 'KHI')?.id ??
-          storeBranches.find((b) => !b.isHeadOffice)?.id ??
-          'khi')
-        : branchId
-    setEmpForm({ ...emptyEmployee, branchId: defaultBranch })
+    setEmpForm({ ...emptyEmployee, branchId: defaultBranchId() })
     setEmpDialogOpen(true)
   }
 
@@ -185,45 +197,51 @@ export default function PayrollPage() {
       toast.error('Name and designation are required')
       return
     }
-    try {
-      if (api) {
-        if (isEditEmp && editEmpId) {
-          await updateEmployee(editEmpId, {
-            fullName: empForm.name,
-            branchId: empForm.branchId,
-            designation: empForm.designation,
-            basicSalary: empForm.basicSalary,
-            allowances: empForm.allowances,
-            email: empForm.email || undefined,
-            bankAccount: empForm.bankAccount || undefined,
-            isActive: empForm.isActive,
-          })
+    if (!empForm.branchId) {
+      toast.error('Branch is required')
+      return
+    }
+    await runSaveEmployee(async () => {
+      try {
+        if (api) {
+          if (isEditEmp && editEmpId) {
+            await updateEmployee(editEmpId, {
+              fullName: empForm.name,
+              branchId: empForm.branchId,
+              designation: empForm.designation,
+              basicSalary: empForm.basicSalary,
+              allowances: empForm.allowances,
+              email: empForm.email || undefined,
+              bankAccount: empForm.bankAccount || undefined,
+              isActive: empForm.isActive,
+            })
+            toast.success('Employee updated')
+          } else {
+            await createEmployee({
+              fullName: empForm.name,
+              branchId: empForm.branchId,
+              designation: empForm.designation,
+              basicSalary: empForm.basicSalary,
+              allowances: empForm.allowances,
+              email: empForm.email || undefined,
+              bankAccount: empForm.bankAccount || undefined,
+              isActive: empForm.isActive,
+            })
+            toast.success('Employee added')
+          }
+          await reload()
+        } else if (isEditEmp && editEmpId) {
+          updatePayrollEmployee(editEmpId, empForm)
           toast.success('Employee updated')
         } else {
-          await createEmployee({
-            fullName: empForm.name,
-            branchId: empForm.branchId,
-            designation: empForm.designation,
-            basicSalary: empForm.basicSalary,
-            allowances: empForm.allowances,
-            email: empForm.email || undefined,
-            bankAccount: empForm.bankAccount || undefined,
-            isActive: empForm.isActive,
-          })
+          addPayrollEmployee(empForm)
           toast.success('Employee added')
         }
-        await reload()
-      } else if (isEditEmp && editEmpId) {
-        updatePayrollEmployee(editEmpId, empForm)
-        toast.success('Employee updated')
-      } else {
-        addPayrollEmployee(empForm)
-        toast.success('Employee added')
+        setEmpDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to save employee')
       }
-      setEmpDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save employee')
-    }
+    })
   }
 
   const handleProcessPayroll = async () => {
@@ -232,24 +250,26 @@ export default function PayrollPage() {
       toast.error(`Payroll for ${formatPayrollPeriod(period)} already processed`)
       return
     }
-    try {
-      if (api) {
-        const targetBranch = resolveProcessBranchId()
-        if (!targetBranch || targetBranch === 'all') {
-          toast.error('Select a branch to process payroll')
-          return
+    await runProcessPayroll(async () => {
+      try {
+        if (api) {
+          const targetBranch = resolveProcessBranchId()
+          if (!targetBranch || targetBranch === 'all') {
+            toast.error('Select a branch to process payroll')
+            return
+          }
+          await apiProcessPayrollRun(period, targetBranch)
+          await reload()
+          toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
+        } else {
+          const runId = processPayrollRun(period, branchId, user.name)
+          if (runId) toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
+          else toast.error('Could not process payroll — check employees and period')
         }
-        await apiProcessPayrollRun(period, targetBranch)
-        await reload()
-        toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
-      } else {
-        const runId = processPayrollRun(period, branchId, user.name)
-        if (runId) toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
-        else toast.error('Could not process payroll — check employees and period')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not process payroll')
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not process payroll')
-    }
+    })
   }
 
   const handleMarkPaid = async (run: PayrollRun) => {
@@ -287,7 +307,7 @@ export default function PayrollPage() {
     setImporting(true)
     try {
       const text = await file.text()
-      const parsed = parsePayrollCsv(text, { branches: storeBranches.length ? storeBranches : branches })
+      const parsed = parsePayrollCsv(text, { branches })
       if (parsed.valid === 0) {
         const firstError = parsed.rows.find((r) => r.error)?.error
         toast.error(firstError ?? 'No valid payroll rows found in CSV')
@@ -334,10 +354,7 @@ export default function PayrollPage() {
   const openReimbursement = () => {
     setReimbForm({
       ...emptyReimbursement,
-      branchId:
-        branchId === 'all'
-          ? (storeBranches.find((b) => b.code === 'KHI')?.id ?? employees[0]?.branchId ?? 'khi')
-          : branchId,
+      branchId: defaultBranchId() || employees[0]?.branchId || '',
       employeeId: employees[0]?.id ?? '',
     })
     setReimbDialogOpen(true)
@@ -349,29 +366,31 @@ export default function PayrollPage() {
       return
     }
     const emp = payrollEmployees.find((e) => e.id === reimbForm.employeeId)
-    try {
-      if (api) {
-        await createReimbursement({
-          employeeId: reimbForm.employeeId,
-          branchId: emp?.branchId ?? reimbForm.branchId,
-          reimbursementType: REIMB_TYPE_TO_API[reimbForm.type],
-          amount: reimbForm.amount,
-          reimbursementDate: reimbForm.date,
-          description: reimbForm.description || undefined,
-        })
-        await reload()
-      } else {
-        addReimbursement(
-          { ...reimbForm, branchId: emp?.branchId ?? reimbForm.branchId },
-          user.id,
-          user.name
-        )
+    await runSaveReimb(async () => {
+      try {
+        if (api) {
+          await createReimbursement({
+            employeeId: reimbForm.employeeId,
+            branchId: emp?.branchId ?? reimbForm.branchId,
+            reimbursementType: REIMB_TYPE_TO_API[reimbForm.type],
+            amount: reimbForm.amount,
+            reimbursementDate: reimbForm.date,
+            description: reimbForm.description || undefined,
+          })
+          await reload()
+        } else {
+          addReimbursement(
+            { ...reimbForm, branchId: emp?.branchId ?? reimbForm.branchId },
+            user.id,
+            user.name
+          )
+        }
+        toast.success('Reimbursement submitted for approval')
+        setReimbDialogOpen(false)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to submit reimbursement')
       }
-      toast.success('Reimbursement submitted for approval')
-      setReimbDialogOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit reimbursement')
-    }
+    })
   }
 
   const handleReimbAction = async (reimb: Reimbursement, status: 'Approved' | 'Rejected') => {
@@ -551,7 +570,11 @@ export default function PayrollPage() {
                   <Input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-44" />
                 </div>
                 {canWrite && (
-                  <Button onClick={handleProcessPayroll} disabled={!!existingRunForPeriod && existingRunForPeriod.status !== 'Draft'}>
+                  <Button
+                    onClick={() => void handleProcessPayroll()}
+                    disabled={!!existingRunForPeriod && existingRunForPeriod.status !== 'Draft'}
+                    loading={processingPayroll}
+                  >
                     <Play className="mr-1 h-4 w-4" /> Process Payroll
                   </Button>
                 )}
@@ -642,8 +665,8 @@ export default function PayrollPage() {
                 <Button type="button" variant="outline" onClick={handleDownloadPayrollTemplate}>
                   <Download className="mr-1 h-4 w-4" /> Template
                 </Button>
-                <Button type="button" variant="outline" disabled={importing} onClick={handleImportClick}>
-                  <Upload className="mr-1 h-4 w-4" /> {importing ? 'Uploading…' : 'Upload Payroll'}
+                <Button type="button" variant="outline" loading={importing} onClick={handleImportClick}>
+                  <Upload className="mr-1 h-4 w-4" /> Upload Payroll
                 </Button>
               </div>
             </div>
@@ -712,10 +735,13 @@ export default function PayrollPage() {
               </div>
               <div className="space-y-2">
                 <Label>Branch</Label>
-                <Select value={empForm.branchId} onValueChange={(v) => setEmpForm({ ...empForm, branchId: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={empForm.branchId || undefined}
+                  onValueChange={(v) => setEmpForm({ ...empForm, branchId: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
                   <SelectContent>
-                    {branches.filter((b) => !b.isHeadOffice).map((b) => (
+                    {branches.map((b) => (
                       <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -746,8 +772,12 @@ export default function PayrollPage() {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEmpDialogOpen(false)}>Cancel</Button>
-              <Button onClick={saveEmployee}>{isEditEmp ? 'Save' : 'Add Employee'}</Button>
+              <Button variant="outline" onClick={() => setEmpDialogOpen(false)} disabled={savingEmployee}>
+                Cancel
+              </Button>
+              <Button onClick={() => void saveEmployee()} loading={savingEmployee}>
+                {isEditEmp ? 'Save' : 'Add Employee'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -796,8 +826,12 @@ export default function PayrollPage() {
             </div>
             <p className="text-xs text-muted-foreground">Claim will be sent to the Approvals queue for manager sign-off.</p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setReimbDialogOpen(false)}>Cancel</Button>
-              <Button onClick={saveReimbursement}>Submit for Approval</Button>
+              <Button variant="outline" onClick={() => setReimbDialogOpen(false)} disabled={savingReimb}>
+                Cancel
+              </Button>
+              <Button onClick={() => void saveReimbursement()} loading={savingReimb}>
+                Submit for Approval
+              </Button>
             </div>
           </div>
         </DialogContent>

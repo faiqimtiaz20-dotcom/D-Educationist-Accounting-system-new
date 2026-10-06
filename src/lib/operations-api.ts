@@ -74,6 +74,7 @@ export function mapApiAuditLog(l: ApiAuditLog): AuditLog {
     module: l.module,
     timestamp: l.timestamp,
     ip: l.ip || '—',
+    entityType: l.entityType ?? undefined,
     entityId: l.entityId ?? undefined,
   }
 }
