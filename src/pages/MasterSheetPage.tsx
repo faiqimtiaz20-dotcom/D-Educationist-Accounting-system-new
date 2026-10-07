@@ -16,7 +16,8 @@ import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { isApiMode } from '@/lib/api-client'
 import { formatCurrency, netFee } from '@/lib/calculations'
 import { toFrontendRole } from '@/lib/api-auth-types'
-import { canViewAllBranches } from '@/lib/permissions'
+import { canViewAllBranches, getPermissionLevel } from '@/lib/permissions'
+import { useAuthStore } from '@/store/auth-store'
 import { getUserName } from '@/lib/org'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import {
@@ -139,8 +140,16 @@ export default function MasterSheetPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { submitting, runSubmit } = useSubmitState()
 
+  const permissionMatrix = useAuthStore((s) => s.permissionMatrix)
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
   const isCounsellor = currentUser?.role === 'Counsellor'
+  const canListUsers =
+    !!currentUser &&
+    getPermissionLevel('Settings', currentUser.role, permissionMatrix) !== 'none'
+  const canListSubAgents =
+    !!currentUser &&
+    getPermissionLevel('Sub-Agents & Payables', currentUser.role, permissionMatrix) !==
+      'none'
 
   const branches = api ? apiBranches : storeBranches
   const universities = api ? apiUniversities : storeUniversities
@@ -182,14 +191,31 @@ export default function MasterSheetPage() {
     if (!api) return
     setLoading(true)
     try {
-      const [studentsPage, uniRows, countryRows, saRows, branchRows, userRows] = await Promise.all([
+      const settled = await Promise.allSettled([
         listStudentsPage({ take: STUDENT_PAGE, skip: studentPage * STUDENT_PAGE }),
         listUniversities(),
         listCountries(),
-        listSubAgents(),
+        canListSubAgents ? listSubAgents() : Promise.resolve([]),
         listBranches(),
-        listUsers(),
+        canListUsers ? listUsers() : Promise.resolve([]),
       ])
+      const pick = <T,>(i: number, label: string): T => {
+        const r = settled[i]
+        if (r.status === 'fulfilled') return r.value as T
+        toast.error(`Failed to load ${label}`)
+        throw r.reason
+      }
+      const studentsPage = pick<Awaited<ReturnType<typeof listStudentsPage>>>(0, 'students')
+      const uniRows = pick<Awaited<ReturnType<typeof listUniversities>>>(1, 'universities')
+      const countryRows = pick<Awaited<ReturnType<typeof listCountries>>>(2, 'countries')
+      const saRows = canListSubAgents
+        ? pick<Awaited<ReturnType<typeof listSubAgents>>>(3, 'sub-agents')
+        : []
+      const branchRows = pick<Awaited<ReturnType<typeof listBranches>>>(4, 'branches')
+      const userRows = canListUsers
+        ? pick<Awaited<ReturnType<typeof listUsers>>>(5, 'users')
+        : []
+
       setApiStudents(studentsPage.items.map(mapApiStudent))
       setStudentTotal(studentsPage.total)
       setApiUniversities(uniRows.map(mapApiUniversity))
@@ -198,12 +224,12 @@ export default function MasterSheetPage() {
       setApiSubAgents(saRows.map(mapApiSubAgent))
       setApiBranches(branchRows.map(mapApiBranch))
       setApiUsers(userRows.map(mapApiUserRow))
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load students')
+    } catch {
+      /* pick() already toasted the failing resource */
     } finally {
       setLoading(false)
     }
-  }, [api, studentPage])
+  }, [api, studentPage, canListSubAgents, canListUsers])
 
   useEffect(() => {
     void load()
@@ -213,10 +239,8 @@ export default function MasterSheetPage() {
   const getSubAgent = (id?: string) => (id ? subAgents.find((a) => a.id === id) : undefined)
 
   const branchStudents = useBranchFilter(students)
-  const scopedStudents = useMemo(() => {
-    if (!isCounsellor || !currentUser) return branchStudents
-    return branchStudents.filter((s) => s.consultantId === currentUser.id)
-  }, [branchStudents, isCounsellor, currentUser])
+  // Counsellor list is already scoped server-side; avoid double-filter mismatches.
+  const scopedStudents = branchStudents
 
   const branchOptions = useMemo(() => {
     const operating = branches.filter((b) => !b.isHeadOffice)
