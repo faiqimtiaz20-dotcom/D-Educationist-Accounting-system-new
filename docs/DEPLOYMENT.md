@@ -59,9 +59,10 @@ npm run prisma:seed
 
 ```bash
 npm run build
-NODE_ENV=production node dist/main.js
-# or: npm run start:prod
+npm run start:prod
 ```
+
+`start:prod` runs `prisma migrate deploy` then starts the API. Already-applied migrations are skipped; only pending ones run. Prefer this over raw `node dist/main` on Railway/production so schema stays in sync on every deploy.
 
 Health check: `GET /api/v1/health` → `{ status: "ok", database: "up", milestone: "M15" }`.
 

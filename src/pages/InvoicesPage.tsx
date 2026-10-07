@@ -46,7 +46,7 @@ import {
   updateInvoice as apiUpdateInvoice,
 } from '@/lib/revenue-api'
 import type { Currency, Invoice, InvoiceLine, InvoiceStatus } from '@/types'
-import { Eye, FileText, MoreHorizontal, Pencil, Send, Trash2, Wallet } from 'lucide-react'
+import { CheckCircle2, Eye, FileText, MoreHorizontal, Pencil, Send, Trash2, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -225,7 +225,6 @@ export default function InvoicesPage() {
     const amount = getInvoiceTotal(invoice)
     const label = getInvoiceStudentLabel(invoice, getStudent)
     const uni = getInvoiceUniversities(invoice, getStudent)
-    const first = invoice.lines[0] ? getStudent(invoice.lines[0].studentId) : undefined
     const vars = {
       invoiceNo: invoice.invoiceNo,
       invoiceDate: formatDate(invoice.invoiceDate),
@@ -236,8 +235,9 @@ export default function InvoicesPage() {
       documentTitle: branding.documentTitle || 'Commission Invoice',
     }
     setSendInvoice(invoice)
+    // Commission invoices bill the university — do not prefill the student's email
     setEmailForm({
-      to: first?.email ?? '',
+      to: '',
       cc: '',
       subject: applyTpl(
         branding.emailSubject || 'Commission Invoice {{invoiceNo}}',
@@ -273,14 +273,44 @@ export default function InvoicesPage() {
     prefillEmail(invoice)
   }
 
+  /** Draft → Sent (+ GL) without requiring SMTP / recipient. */
+  const handleMarkAsSent = async (invoice: Invoice) => {
+    if (!canWrite) {
+      toast.error('You do not have permission to send invoices')
+      return
+    }
+    if (invoice.status !== 'Draft') {
+      toast.error('Only draft invoices can be marked Sent')
+      return
+    }
+    if (isDateLocked(invoice.invoiceDate)) {
+      toast.error('This period is locked — cannot post to a closed fiscal period')
+      return
+    }
+    await runSend(async () => {
+      try {
+        if (api) {
+          const res = await apiSendInvoice(invoice.id, {})
+          await reload()
+          toast.success(res.message ?? `Invoice ${invoice.invoiceNo} marked Sent`)
+        } else {
+          updateInvoice(invoice.id, { status: 'Sent' })
+          toast.success(`Invoice ${invoice.invoiceNo} marked Sent`)
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Mark as Sent failed')
+      }
+    })
+  }
+
   const handleSend = async () => {
     if (!sendInvoice) return
     if (!canWrite) {
       toast.error('You do not have permission to send invoices')
       return
     }
-    if (!emailForm.to.trim()) {
-      toast.error('Recipient (To) is required')
+    if (isResend && !emailForm.to.trim()) {
+      toast.error('Recipient (To) is required to resend')
       return
     }
     if (!isResend && isDateLocked(sendInvoice.invoiceDate)) {
@@ -306,19 +336,30 @@ export default function InvoicesPage() {
           return
         }
         if (api) {
-          const res = await apiSendInvoice(sendInvoice.id, emailForm)
+          const res = await apiSendInvoice(sendInvoice.id, {
+            to: emailForm.to.trim() || undefined,
+            cc: emailForm.cc.trim() || undefined,
+            subject: emailForm.subject,
+            body: emailForm.body,
+          })
           await reload()
           if (res.emailSent) {
             toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
-          } else {
+          } else if (emailForm.to.trim()) {
             toast.warning(
               res.message ??
                 `Invoice marked Sent; email not delivered (configure Settings → Email)`,
             )
+          } else {
+            toast.success(res.message ?? `Invoice ${sendInvoice.invoiceNo} marked Sent`)
           }
         } else {
           updateInvoice(sendInvoice.id, { status: 'Sent' })
-          toast.success(`Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`)
+          toast.success(
+            emailForm.to.trim()
+              ? `Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`
+              : `Invoice ${sendInvoice.invoiceNo} marked Sent`,
+          )
         }
         setSendInvoice(null)
       } catch (err) {
@@ -575,9 +616,17 @@ export default function InvoicesPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {canWrite && row.status === 'Draft' && (
-              <DropdownMenuItem className="text-primary" onClick={() => openSend(row)}>
-                <Send /> Send invoice
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem
+                  className="text-primary"
+                  onSelect={() => void handleMarkAsSent(row)}
+                >
+                  <CheckCircle2 /> Mark as Sent
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openSend(row)}>
+                  <Send /> Email invoice
+                </DropdownMenuItem>
+              </>
             )}
             <DropdownMenuItem onClick={() => setPreviewInvoice(row)}>
               <Eye /> Preview
@@ -934,12 +983,24 @@ export default function InvoicesPage() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setPreviewInvoice(null)}>Close</Button>
                 {canWrite && previewInvoice.status === 'Draft' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => { openSend(previewInvoice); setPreviewInvoice(null) }}
-                  >
-                    <Send className="mr-1.5 h-4 w-4" /> Send Invoice
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const inv = previewInvoice
+                        setPreviewInvoice(null)
+                        void handleMarkAsSent(inv)
+                      }}
+                    >
+                      <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark as Sent
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => { openSend(previewInvoice); setPreviewInvoice(null) }}
+                    >
+                      <Send className="mr-1.5 h-4 w-4" /> Email Invoice
+                    </Button>
+                  </>
                 )}
                 <Button onClick={() => toast.success('PDF export started')}>Export PDF</Button>
               </div>
@@ -957,13 +1018,16 @@ export default function InvoicesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>To</Label>
+              <Label>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
               <Input
                 type="email"
                 value={emailForm.to}
                 onChange={(e) => setEmailForm((p) => ({ ...p, to: e.target.value }))}
-                placeholder="recipient@university.edu"
+                placeholder="accounts@university.edu"
               />
+              <p className="text-xs text-muted-foreground">
+                Commission invoices are billed to the university — enter their accounts email, not the student&apos;s.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>CC</Label>
@@ -993,7 +1057,12 @@ export default function InvoicesPage() {
                 Cancel
               </Button>
               <Button onClick={() => void handleSend()} loading={sending}>
-                <Send className="mr-1.5 h-4 w-4" /> {isResend ? 'Resend' : 'Send'}
+                <Send className="mr-1.5 h-4 w-4" />{' '}
+                {isResend
+                  ? 'Resend'
+                  : emailForm.to.trim()
+                    ? 'Send email'
+                    : 'Mark as Sent'}
               </Button>
             </div>
           </div>
