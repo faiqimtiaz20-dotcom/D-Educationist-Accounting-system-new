@@ -80,7 +80,7 @@ export function ReportPage() {
 
   const visibleBranches = useMemo(
     () =>
-      user && canViewAllBranches(user.role)
+      user && canViewAllBranches(user)
         ? branches
         : branches.filter((b) => b.id === user?.branchId),
     [user],

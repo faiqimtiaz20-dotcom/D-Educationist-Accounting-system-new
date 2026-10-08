@@ -63,7 +63,7 @@ function ConsolidatedCashFlowReportPageLocal() {
   const payrollRuns = useDataStore((s) => s.payrollRuns)
   const branches = useDataStore((s) => s.branches)
   const effectiveBranchId = useEffectiveBranchId()
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
 
   const [tab, setTab] = useState('summary')
   const [detailCategory, setDetailCategory] = useState<CashFlowCategory | null>(null)

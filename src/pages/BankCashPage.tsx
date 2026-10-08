@@ -83,12 +83,15 @@ export default function BankCashPage() {
   const [form, setForm] = useState<BankForm>(emptyForm)
   const { submitting, runSubmit } = useSubmitState()
 
+  // Add/Edit requires API mode + Bank & Cash write permission
   const canManage = Boolean(api && canWrite)
 
   const totalBalance = filteredAccounts.reduce((s, a) => {
     if (a.currency === 'PKR') return s + a.balance
     return s
   }, 0)
+
+  const bankBalanceLabel = formatCurrency(totalBalance)
 
   const openAdd = () => {
     setIsEdit(false)
@@ -314,7 +317,7 @@ export default function BankCashPage() {
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="PKR Bank Balance" value={formatCurrency(totalBalance)} icon={Landmark} accent="blue" />
+        <MetricCard title="PKR Bank Balance" value={bankBalanceLabel} icon={Landmark} accent="blue" />
         <MetricCard title="Bank Accounts" value={filteredAccounts.length} icon={Building2} accent="green" />
         <MetricCard title="Unmatched Items" value={unmatched.length} icon={FileCheck} accent="orange" />
         <MetricCard title="Cheques Issued" value={filteredCheques.length} icon={CreditCard} accent="purple" />
@@ -329,6 +332,16 @@ export default function BankCashPage() {
         </TabsList>
 
         <TabsContent value="accounts">
+          {canManage && filteredAccounts.length === 0 && (
+            <div className="mb-4 rounded-lg border border-dashed p-6 text-center">
+              <p className="text-sm text-muted-foreground mb-3">
+                No bank accounts yet. Create one to record remittances and track cash position.
+              </p>
+              <Button type="button" onClick={openAdd}>
+                Add Bank Account
+              </Button>
+            </div>
+          )}
           <DataTable
             data={filteredAccounts}
             columns={accountColumns}

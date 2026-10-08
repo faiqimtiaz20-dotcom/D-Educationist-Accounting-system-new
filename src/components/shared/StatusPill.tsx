@@ -5,7 +5,9 @@ const statusMap: Record<string, { variant: 'default' | 'secondary' | 'success' |
   Draft: { variant: 'secondary' },
   Sent: { variant: 'info' },
   'Partially Received': { variant: 'warning' },
+  PartiallyReceived: { variant: 'warning', label: 'Partially Received' },
   'Fully Received': { variant: 'success' },
+  FullyReceived: { variant: 'success', label: 'Fully Received' },
   Closed: { variant: 'outline' },
   Pending: { variant: 'warning' },
   Approved: { variant: 'success' },
@@ -26,6 +28,7 @@ const statusMap: Record<string, { variant: 'default' | 'secondary' | 'success' |
   Active: { variant: 'success' },
   Suspended: { variant: 'destructive' },
   Trial: { variant: 'warning' },
+  Processed: { variant: 'info' },
 }
 
 interface StatusPillProps {

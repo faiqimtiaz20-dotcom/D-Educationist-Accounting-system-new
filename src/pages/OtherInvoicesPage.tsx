@@ -71,7 +71,7 @@ const emptyForm = (branchId: string) => ({
 
 export default function OtherInvoicesPage() {
   const currentUser = useCurrentUser()
-  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
+  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
   const { api, reload, loading } = useRevenueApiSync()
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)

@@ -60,10 +60,10 @@ export function FilterPanel({
     }
     setLocalFrom('2026-01-01')
     setLocalTo('2026-12-31')
-    if (user && canViewAllBranches(user.role)) setSelectedBranchId('all')
+    if (user && canViewAllBranches(user)) setSelectedBranchId('all')
   }
 
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
   const branchUsers = isSuperAdmin
     ? users
     : users.filter((u) => u.branchId === user?.branchId)

@@ -87,7 +87,7 @@ function CounsellorReportPageLocal() {
   const effectiveBranchId = useEffectiveBranchId()
   const setSelectedBranchId = useAppStore((s) => s.setSelectedBranchId)
   const isCounsellor = user?.role === 'Counsellor'
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
 
   const [tab, setTab] = useState(isCounsellor ? 'detail' : 'summary')
   const [detailCounsellorId, setDetailCounsellorId] = useState<string | null>(null)

@@ -102,7 +102,7 @@ function DestinationReportPageLocal({ mode }: DestinationReportPageProps) {
   const users = useDataStore((s) => s.users)
   const effectiveBranchId = useEffectiveBranchId()
   const isCounsellor = user?.role === 'Counsellor'
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
 
   const [selectedKey, setSelectedKey] = useState('all')
 

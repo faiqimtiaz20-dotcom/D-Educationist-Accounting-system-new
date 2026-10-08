@@ -245,9 +245,20 @@ export default function PayrollPage() {
   }
 
   const handleProcessPayroll = async () => {
-    if (!canWrite || !user) return
+    if (!canWrite) {
+      toast.error('You do not have permission to process payroll')
+      return
+    }
+    if (!user) {
+      toast.error('Sign in again to process payroll')
+      return
+    }
     if (existingRunForPeriod?.status === 'Processed' || existingRunForPeriod?.status === 'Paid') {
       toast.error(`Payroll for ${formatPayrollPeriod(period)} already processed`)
+      return
+    }
+    if (previewLines.length === 0) {
+      toast.error('No active employees in this branch to process')
       return
     }
     await runProcessPayroll(async () => {
@@ -262,7 +273,7 @@ export default function PayrollPage() {
           await reload()
           toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
         } else {
-          const runId = processPayrollRun(period, branchId, user.name)
+          const runId = processPayrollRun(period, resolveProcessBranchId() || branchId, user.name)
           if (runId) toast.success(`Payroll processed for ${formatPayrollPeriod(period)}`)
           else toast.error('Could not process payroll — check employees and period')
         }
@@ -598,7 +609,9 @@ export default function PayrollPage() {
                   <TableBody>
                     {previewLines.map((row) => (
                       <TableRow key={row.emp.id}>
-                        <TableCell className="font-mono text-xs">{formatEmployeeCode(row.emp.id)}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {row.emp.employeeNo || formatEmployeeCode(row.emp.id)}
+                        </TableCell>
                         <TableCell className="font-medium">{row.emp.name}</TableCell>
                         <TableCell>{row.emp.designation}</TableCell>
                         <TableCell className="font-mono text-xs">{row.emp.bankAccount || '—'}</TableCell>

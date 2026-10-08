@@ -120,7 +120,16 @@ export const useAuthStore = create<AuthState>()(
               rememberedEmail: remember ? normalized : get().rememberedEmail,
             })
 
-            if (data.user.isSuperAdmin) {
+            if (
+              data.user.canViewAllBranches ||
+              data.user.isSuperAdmin ||
+              canViewAllBranches({
+                role: toFrontendRole(data.user.roleName),
+                branchIsHeadOffice: data.user.branchIsHeadOffice,
+                canViewAllBranches: data.user.canViewAllBranches,
+                branchId: data.user.branchId ?? undefined,
+              })
+            ) {
               useAppStore.getState().setSelectedBranchId('all')
             } else if (data.user.branchId) {
               useAppStore.getState().setSelectedBranchId(data.user.branchId)
@@ -183,7 +192,7 @@ export const useAuthStore = create<AuthState>()(
           rememberedEmail: remember ? normalized : get().rememberedEmail,
         })
 
-        if (canViewAllBranches(user.role)) {
+        if (canViewAllBranches(user)) {
           useAppStore.getState().setSelectedBranchId('all')
         } else {
           useAppStore.getState().setSelectedBranchId(user.branchId)
@@ -262,7 +271,16 @@ export const useAuthStore = create<AuthState>()(
             permissionMatrix: mapApiPermissions(me.permissions),
             loginAt: get().loginAt ?? new Date().toISOString(),
           })
-          if (me.user.isSuperAdmin) {
+          if (
+            me.user.canViewAllBranches ||
+            me.user.isSuperAdmin ||
+            canViewAllBranches({
+              role: toFrontendRole(me.user.roleName),
+              branchIsHeadOffice: me.user.branchIsHeadOffice,
+              canViewAllBranches: me.user.canViewAllBranches,
+              branchId: me.user.branchId ?? undefined,
+            })
+          ) {
             useAppStore.getState().setSelectedBranchId('all')
           } else if (me.user.branchId) {
             useAppStore.getState().setSelectedBranchId(me.user.branchId)

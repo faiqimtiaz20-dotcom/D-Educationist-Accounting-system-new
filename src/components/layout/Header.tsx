@@ -49,7 +49,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
   } = useAppStore()
 
   const isCrm = isCrmAdminUser(apiUser)
-  const isSuperAdmin = !isCrm && user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = !isCrm && user ? canViewAllBranches(user) : false
   const { displayName, tenantCode, isTenantBound } = useTenantContext()
   const roleLabel = displayRoleLabel(user?.role ?? '', {
     isCrmAdmin: isCrm,

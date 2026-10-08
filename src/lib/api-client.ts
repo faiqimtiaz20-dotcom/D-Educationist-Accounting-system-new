@@ -129,6 +129,17 @@ export async function apiFetch<T>(
     onUnauthorized?.()
   }
 
+  // SPA / ngrok catch-all can return index.html with HTTP 200 for /api/* when
+  // the proxy misses — treat HTML as an auth/config failure, not JSON data.
+  const contentType = res.headers.get('content-type') ?? ''
+  if (contentType.includes('text/html')) {
+    onUnauthorized?.()
+    throw new ApiError(
+      res.status === 200 ? 401 : res.status,
+      'Session expired or API unreachable — please sign in again',
+    )
+  }
+
   if (!res.ok) {
     let message = `Request failed (${res.status})`
     try {

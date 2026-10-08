@@ -21,6 +21,8 @@ export function useCurrentUser(): User | undefined {
       email: apiUser.email,
       role: toFrontendRole(apiUser.roleName),
       branchId: apiUser.branchId ?? '',
+      branchIsHeadOffice: apiUser.branchIsHeadOffice,
+      canViewAllBranches: apiUser.canViewAllBranches,
     }
   }
 
@@ -30,18 +32,25 @@ export function useCurrentUser(): User | undefined {
 export function useEffectiveBranchId(): string {
   const user = useCurrentUser()
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)
-  if (user && canViewAllBranches(user.role)) return selectedBranchId
+  if (user && canViewAllBranches(user)) return selectedBranchId
   return user?.branchId ?? 'khi'
 }
 
-/** Lock branch scope when a non–super-admin logs in */
+/** Lock branch scope when a non–all-branches user logs in */
 export function useBranchScope() {
   const user = useCurrentUser()
   const setSelectedBranchId = useAppStore((s) => s.setSelectedBranchId)
 
   useEffect(() => {
-    if (user && !canViewAllBranches(user.role)) {
+    if (user && !canViewAllBranches(user)) {
       setSelectedBranchId(user.branchId)
     }
-  }, [user?.id, user?.branchId, user?.role, setSelectedBranchId])
+  }, [
+    user?.id,
+    user?.branchId,
+    user?.role,
+    user?.branchIsHeadOffice,
+    user?.canViewAllBranches,
+    setSelectedBranchId,
+  ])
 }

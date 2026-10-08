@@ -18,6 +18,7 @@ import {
   assignableRolesFor,
   canEditPermissionMatrix,
   canManageUsers,
+  canViewAllBranches,
   USER_ROLES,
   type PermissionLevel,
   type PermissionMatrixRow,
@@ -154,13 +155,20 @@ export function UsersSettingsPage() {
     : storeBranches
   const permissionMatrix = api ? apiMatrix : storeMatrix
 
+  const seesAllBranches = currentUser ? canViewAllBranches(currentUser) : false
+
   const visibleUsers = useMemo(() => {
-    if (currentUser?.role === 'Super Admin') return users
-    if (currentUser?.role === 'Branch Manager') {
+    if (!currentUser) return []
+    if (seesAllBranches) {
+      // Tenant Admin sees everyone; HO BM still cannot manage Tenant Admin rows
+      if (currentUser.role === 'Super Admin') return users
+      return users.filter((u) => u.role !== 'Super Admin')
+    }
+    if (currentUser.role === 'Branch Manager') {
       return users.filter((u) => u.branchId === currentUser.branchId && u.role !== 'Super Admin')
     }
-    return users.filter((u) => u.id === currentUser?.id)
-  }, [users, currentUser])
+    return users.filter((u) => u.id === currentUser.id)
+  }, [users, currentUser, seesAllBranches])
 
   const branchFilteredUsers = useBranchFilter(visibleUsers)
 
@@ -248,7 +256,11 @@ export function UsersSettingsPage() {
       toast.error('Name and email are required')
       return
     }
-    if (currentUser?.role === 'Branch Manager' && form.branchId !== currentUser.branchId) {
+    if (
+      currentUser?.role === 'Branch Manager' &&
+      !seesAllBranches &&
+      form.branchId !== currentUser.branchId
+    ) {
       toast.error('You can only add users to your own branch')
       return
     }
@@ -556,7 +568,7 @@ export function UsersSettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Branch</Label>
-                {currentUser?.role === 'Super Admin' ? (
+                {seesAllBranches ? (
                   <Select
                     value={form.branchId}
                     onValueChange={(v) => setForm({ ...form, branchId: v })}
@@ -565,10 +577,12 @@ export function UsersSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(branches.some((b) => !b.isHeadOffice)
-                        ? branches.filter((b) => !b.isHeadOffice)
-                        : branches
-                      ).map((b) => (
+                      {[...branches]
+                        .sort((a, b) => {
+                          if (a.isHeadOffice !== b.isHeadOffice) return a.isHeadOffice ? -1 : 1
+                          return a.name.localeCompare(b.name)
+                        })
+                        .map((b) => (
                           <SelectItem key={b.id} value={b.id}>
                             {b.name}
                           </SelectItem>

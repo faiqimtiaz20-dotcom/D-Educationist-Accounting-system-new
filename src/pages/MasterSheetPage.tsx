@@ -141,7 +141,7 @@ export default function MasterSheetPage() {
   const { submitting, runSubmit } = useSubmitState()
 
   const permissionMatrix = useAuthStore((s) => s.permissionMatrix)
-  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
+  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const isCounsellor = currentUser?.role === 'Counsellor'
   const canListUsers =
     !!currentUser &&
@@ -242,10 +242,12 @@ export default function MasterSheetPage() {
   // Counsellor list is already scoped server-side; avoid double-filter mismatches.
   const scopedStudents = branchStudents
 
+  // Include Head Office — HO staff must be able to file students to their own branch
   const branchOptions = useMemo(() => {
-    const operating = branches.filter((b) => !b.isHeadOffice)
-    // New tenants may only have HO until operating branches are added
-    return operating.length > 0 ? operating : branches
+    return [...branches].sort((a, b) => {
+      if (a.isHeadOffice !== b.isHeadOffice) return a.isHeadOffice ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
   }, [branches])
 
   const filtered = useMemo(() => {

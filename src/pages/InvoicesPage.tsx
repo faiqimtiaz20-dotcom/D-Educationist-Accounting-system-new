@@ -86,7 +86,7 @@ export default function InvoicesPage() {
   const currentUser = useCurrentUser()
   const orgName = useSettingsStore((s) => s.orgName)
   const branding = useSettingsStore((s) => s.invoiceBranding)
-  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser.role) : false
+  const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
   const { api, reload, loading } = useRevenueApiSync()
   const invoices = useDataStore((s) => s.invoices)
@@ -142,6 +142,7 @@ export default function InvoicesPage() {
   const [universityFilter, setUniversityFilter] = useState('all')
   const { submitting: saving, runSubmit: runSave } = useSubmitState()
   const { submitting: sending, runSubmit: runSend } = useSubmitState()
+  const { submitting: markingSent, runSubmit: runMarkSent } = useSubmitState()
 
   const paymentInvoice = paymentInvoiceId
     ? invoices.find((i) => i.id === paymentInvoiceId) ?? null
@@ -287,7 +288,7 @@ export default function InvoicesPage() {
       toast.error('This period is locked — cannot post to a closed fiscal period')
       return
     }
-    await runSend(async () => {
+    await runMarkSent(async () => {
       try {
         if (api) {
           const res = await apiSendInvoice(invoice.id, {})
@@ -619,7 +620,11 @@ export default function InvoicesPage() {
               <>
                 <DropdownMenuItem
                   className="text-primary"
-                  onSelect={() => void handleMarkAsSent(row)}
+                  disabled={markingSent}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    void handleMarkAsSent(row)
+                  }}
                 >
                   <CheckCircle2 /> Mark as Sent
                 </DropdownMenuItem>

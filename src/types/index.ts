@@ -58,6 +58,10 @@ export interface User {
   email: string
   role: UserRole
   branchId: string
+  /** True when home branch is Head Office (API sessions). */
+  branchIsHeadOffice?: boolean
+  /** Tenant Admin, or HO Branch Manager / Accountant. */
+  canViewAllBranches?: boolean
 }
 
 export interface Student {

@@ -60,7 +60,7 @@ function BranchCashPositionReportPageLocal() {
   const pettyCash = useDataStore((s) => s.pettyCash)
   const branches = useDataStore((s) => s.branches)
   const effectiveBranchId = useEffectiveBranchId()
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
 
   const [tab, setTab] = useState('summary')
   const [detailBranchId, setDetailBranchId] = useState<string | null>(null)

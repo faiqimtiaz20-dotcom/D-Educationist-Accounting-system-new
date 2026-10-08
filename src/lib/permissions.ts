@@ -188,9 +188,33 @@ export function isBranchManager(role: UserRole) {
   return role === 'Branch Manager'
 }
 
-/** All branches within the current tenant — never cross-tenant. */
-export function canViewAllBranches(role: UserRole) {
-  return role === 'Super Admin'
+type BranchAccessSubject =
+  | UserRole
+  | {
+      role: UserRole
+      branchIsHeadOffice?: boolean
+      canViewAllBranches?: boolean
+      /** Mock/local: Head Office seed id is `ho`. */
+      branchId?: string
+    }
+
+/**
+ * All branches within the current tenant — never cross-tenant.
+ * Accepts a role string (Tenant Admin only) or a user-like object so
+ * Head Office Branch Manager / Accountant also get all-branch access.
+ */
+export function canViewAllBranches(subject: BranchAccessSubject): boolean {
+  if (typeof subject === 'string') {
+    return subject === 'Super Admin'
+  }
+  if (subject.canViewAllBranches === true) return true
+  if (subject.role === 'Super Admin') return true
+  const atHo =
+    subject.branchIsHeadOffice === true || subject.branchId === 'ho'
+  return (
+    atHo &&
+    (subject.role === 'Branch Manager' || subject.role === 'Accountant')
+  )
 }
 
 export function canManageBranches(role: UserRole) {

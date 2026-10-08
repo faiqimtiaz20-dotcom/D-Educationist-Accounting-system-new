@@ -14,7 +14,11 @@ export type ApiAuthUser = {
   branchId: string | null
   branchCode: string | null
   branchName?: string | null
+  /** True when home branch is Head Office. */
+  branchIsHeadOffice?: boolean
   isSuperAdmin: boolean
+  /** Tenant Admin, or HO Branch Manager / Accountant. */
+  canViewAllBranches?: boolean
   isCrmAdmin?: boolean
 }
 

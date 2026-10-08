@@ -85,7 +85,7 @@ function UniversityWisePLReportPageLocal() {
   const universities = useDataStore((s) => s.universities)
   const effectiveBranchId = useEffectiveBranchId()
   const setSelectedBranchId = useAppStore((s) => s.setSelectedBranchId)
-  const isSuperAdmin = user ? canViewAllBranches(user.role) : false
+  const isSuperAdmin = user ? canViewAllBranches(user) : false
 
   const [tab, setTab] = useState('summary')
   const [detailUniversity, setDetailUniversity] = useState<string | null>(null)
