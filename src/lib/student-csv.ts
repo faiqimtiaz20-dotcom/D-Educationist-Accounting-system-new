@@ -30,6 +30,8 @@ export interface StudentCsvRowResult {
   rowNumber: number
   studentId: string
   payload?: StudentCsvPayload
+  /** True when Commission % column had a value (skip uni×course rate resolve). */
+  commissionExplicit?: boolean
   error?: string
 }
 
@@ -334,8 +336,14 @@ export function parseStudentCsv(text: string, ctx: StudentCsvContext): StudentCs
 
     const tuitionFee = Number(get(cells, 'tuitionFee') || 0)
     const scholarship = Number(get(cells, 'scholarship') || 0)
-    const commissionRate = Number(get(cells, 'commissionRate') || 15)
-    if (Number.isNaN(tuitionFee) || Number.isNaN(scholarship) || Number.isNaN(commissionRate)) {
+    const commissionRaw = get(cells, 'commissionRate')
+    const commissionExplicit = Boolean(commissionRaw)
+    const commissionRate = commissionExplicit ? Number(commissionRaw) : 15
+    if (
+      Number.isNaN(tuitionFee) ||
+      Number.isNaN(scholarship) ||
+      (commissionExplicit && Number.isNaN(commissionRate))
+    ) {
       rows.push({ rowNumber, studentId, error: 'Tuition, scholarship, and commission % must be numbers' })
       failed++
       continue
@@ -379,7 +387,7 @@ export function parseStudentCsv(text: string, ctx: StudentCsvContext): StudentCs
     if (existing) updated++
     else created++
 
-    rows.push({ rowNumber, studentId, payload })
+    rows.push({ rowNumber, studentId, payload, commissionExplicit })
   }
 
   return { rows, created, updated, failed }

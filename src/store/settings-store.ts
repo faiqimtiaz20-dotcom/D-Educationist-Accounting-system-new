@@ -22,7 +22,7 @@ export const DEFAULT_INVOICE_BRANDING: InvoiceBranding = {
   email: '',
   website: '',
   footer: 'Thank you for your business.',
-  documentTitle: 'Commission Invoice',
+  documentTitle: 'INVOICE',
   accentColor: '#0f766e',
   emailSubject: 'Commission Invoice {{invoiceNo}}',
   emailBody:
@@ -31,6 +31,14 @@ export const DEFAULT_INVOICE_BRANDING: InvoiceBranding = {
     ' for {{students}}{{universities}}.\n\n' +
     'Total amount: {{amount}}.\n\n' +
     'Kind regards,\n{{orgName}}',
+  companyLegalName: '',
+  bankName: '',
+  bankBranch: '',
+  bankCity: '',
+  accountTitle: '',
+  accountNo: '',
+  swiftCode: '',
+  iban: '',
 }
 
 interface SettingsState {

@@ -33,6 +33,14 @@ export type InvoiceBranding = {
   accentColor: string
   emailSubject: string
   emailBody: string
+  companyLegalName: string
+  bankName: string
+  bankBranch: string
+  bankCity: string
+  accountTitle: string
+  accountNo: string
+  swiftCode: string
+  iban: string
 }
 
 export type ApiSettings = {
@@ -150,6 +158,14 @@ export function patchSettings(
       invoiceAccentColor?: string
       invoiceEmailSubject?: string
       invoiceEmailBody?: string
+      invoiceCompanyLegalName?: string
+      invoiceBankName?: string
+      invoiceBankBranch?: string
+      invoiceBankCity?: string
+      invoiceAccountTitle?: string
+      invoiceAccountNo?: string
+      invoiceSwiftCode?: string
+      invoiceIban?: string
     }
   >,
 ) {

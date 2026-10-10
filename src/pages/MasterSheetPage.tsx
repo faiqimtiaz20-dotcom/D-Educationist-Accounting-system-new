@@ -22,11 +22,14 @@ import { getUserName } from '@/lib/org'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
 import {
   listCountries,
+  listCourses,
   listUniversities,
   listSubAgents,
+  mapApiCourse,
   mapApiTenantCountry,
   mapApiUniversity,
   mapApiSubAgent,
+  resolveUniversityCourseRate,
 } from '@/lib/masters-api'
 import { listBranches, listUsers, type ApiBranch } from '@/lib/settings-api'
 import {
@@ -46,6 +49,7 @@ import { useDataStore } from '@/store/data-store'
 import type {
   ApplicationStatus,
   Branch,
+  Course,
   Student,
   SubAgent,
   TenantCountry,
@@ -123,12 +127,15 @@ export default function MasterSheetPage() {
   const STUDENT_PAGE = 50
   const [apiBranches, setApiBranches] = useState<Branch[]>([])
   const [apiUniversities, setApiUniversities] = useState<University[]>([])
+  const [apiCourses, setApiCourses] = useState<Course[]>([])
   const [apiCountries, setApiCountries] = useState<TenantCountry[]>([])
   const [apiSubAgents, setApiSubAgents] = useState<SubAgent[]>([])
   const [apiUsers, setApiUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(api)
   /** universityId by university name for API writes */
   const [uniIdByName, setUniIdByName] = useState<Record<string, string>>({})
+  /** courseId by course name (case-insensitive key) for API writes */
+  const [courseIdByName, setCourseIdByName] = useState<Record<string, string>>({})
 
   const [activeStatus, setActiveStatus] = useState('all')
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -153,6 +160,7 @@ export default function MasterSheetPage() {
 
   const branches = api ? apiBranches : storeBranches
   const universities = api ? apiUniversities : storeUniversities
+  const courses = api ? apiCourses : []
   const countries: TenantCountry[] = api
     ? apiCountries
     : FALLBACK_COUNTRIES.map((name, i) => ({
@@ -195,6 +203,7 @@ export default function MasterSheetPage() {
         listStudentsPage({ take: STUDENT_PAGE, skip: studentPage * STUDENT_PAGE }),
         listUniversities(),
         listCountries(),
+        listCourses(),
         canListSubAgents ? listSubAgents() : Promise.resolve([]),
         listBranches(),
         canListUsers ? listUsers() : Promise.resolve([]),
@@ -208,18 +217,23 @@ export default function MasterSheetPage() {
       const studentsPage = pick<Awaited<ReturnType<typeof listStudentsPage>>>(0, 'students')
       const uniRows = pick<Awaited<ReturnType<typeof listUniversities>>>(1, 'universities')
       const countryRows = pick<Awaited<ReturnType<typeof listCountries>>>(2, 'countries')
+      const courseRows = pick<Awaited<ReturnType<typeof listCourses>>>(3, 'courses')
       const saRows = canListSubAgents
-        ? pick<Awaited<ReturnType<typeof listSubAgents>>>(3, 'sub-agents')
+        ? pick<Awaited<ReturnType<typeof listSubAgents>>>(4, 'sub-agents')
         : []
-      const branchRows = pick<Awaited<ReturnType<typeof listBranches>>>(4, 'branches')
+      const branchRows = pick<Awaited<ReturnType<typeof listBranches>>>(5, 'branches')
       const userRows = canListUsers
-        ? pick<Awaited<ReturnType<typeof listUsers>>>(5, 'users')
+        ? pick<Awaited<ReturnType<typeof listUsers>>>(6, 'users')
         : []
 
       setApiStudents(studentsPage.items.map(mapApiStudent))
       setStudentTotal(studentsPage.total)
       setApiUniversities(uniRows.map(mapApiUniversity))
       setUniIdByName(Object.fromEntries(uniRows.map((u) => [u.name, u.id])))
+      setApiCourses(courseRows.map(mapApiCourse).filter((c) => c.isActive !== false))
+      setCourseIdByName(
+        Object.fromEntries(courseRows.map((c) => [c.name.trim().toLowerCase(), c.id])),
+      )
       setApiCountries(countryRows.map(mapApiTenantCountry).filter((c) => c.isActive !== false))
       setApiSubAgents(saRows.map(mapApiSubAgent))
       setApiBranches(branchRows.map(mapApiBranch))
@@ -310,6 +324,13 @@ export default function MasterSheetPage() {
     return uni?.id
   }
 
+  const resolveCourseId = (courseName: string) => {
+    const key = courseName.trim().toLowerCase()
+    if (!key) return undefined
+    if (api) return courseIdByName[key]
+    return courses.find((c) => c.name.trim().toLowerCase() === key)?.id
+  }
+
   const handleDelete = async (student: Student) => {
     if (!confirm(`Delete student ${student.name}?`)) return
     try {
@@ -365,7 +386,21 @@ export default function MasterSheetPage() {
             errors.push(`Row ${row.rowNumber}: Unknown university "${row.payload.university}"`)
             continue
           }
-          const payload = studentFormToApiPayload(row.payload, uniId)
+          const courseId = resolveCourseId(row.payload.course)
+          if (!courseId) {
+            errors.push(
+              `Row ${row.rowNumber}: Unknown course "${row.payload.course}" — register it in Settings → Courses`,
+            )
+            continue
+          }
+          const rate = row.commissionExplicit
+            ? row.payload.expectedCommissionRate
+            : commissionFor(row.payload.university, row.payload.course, courseId)
+          const payload = studentFormToApiPayload(
+            { ...row.payload, expectedCommissionRate: rate },
+            uniId,
+            courseId,
+          )
           try {
             const existingId = byCode.get(row.payload.studentId.trim().toLowerCase())
             if (existingId) {
@@ -442,6 +477,15 @@ export default function MasterSheetPage() {
     })
   }
 
+  const commissionFor = (universityName: string, courseName: string, courseId?: string) => {
+    const uni = universities.find((u) => u.name === universityName)
+    const resolvedCourseId =
+      courseId ||
+      courses.find((c) => c.name === courseName)?.id ||
+      (courseName ? courseIdByName[courseName.trim().toLowerCase()] : undefined)
+    return resolveUniversityCourseRate(uni, resolvedCourseId)
+  }
+
   const loadUniversity = (universityName: string) => {
     const uni = universities.find((u) => u.name === universityName)
     if (!uni) return
@@ -450,7 +494,7 @@ export default function MasterSheetPage() {
       university: uni.name,
       country: uni.country,
       currency: uni.currency,
-      expectedCommissionRate: uni.defaultCommissionRate,
+      expectedCommissionRate: commissionFor(uni.name, prev.course, prev.courseId),
     }))
   }
 
@@ -490,6 +534,10 @@ export default function MasterSheetPage() {
       toast.error('Please select a university')
       return
     }
+    if (!form.course.trim()) {
+      toast.error(api ? 'Please select a course' : 'Course is required')
+      return
+    }
     const branchId = isSuperAdmin ? form.branchId : (currentUser?.branchId ?? form.branchId)
     const consultantId =
       isCounsellor && currentUser ? currentUser.id : form.consultantId
@@ -501,9 +549,15 @@ export default function MasterSheetPage() {
             toast.error('Selected university is not registered in the API')
             return
           }
+          const courseId = form.courseId || resolveCourseId(form.course)
+          if (!courseId) {
+            toast.error('Selected course is not registered. Add it in Settings → Courses.')
+            return
+          }
           const payload = studentFormToApiPayload(
             { ...form, branchId, consultantId } as Student,
             uniId,
+            courseId,
           )
           if (isNew) {
             await apiCreateStudent(payload)
@@ -845,7 +899,51 @@ export default function MasterSheetPage() {
               </div>
               <div className="space-y-2">
                 <Label>Course</Label>
-                <Input value={form.course} onChange={(e) => updateField('course', e.target.value)} />
+                {api ? (
+                  <>
+                    <Select
+                      value={form.course || undefined}
+                      onValueChange={(name) => {
+                        const row = courses.find((c) => c.name === name)
+                        setForm((prev) => ({
+                          ...prev,
+                          course: name,
+                          courseId: row?.id,
+                          expectedCommissionRate: commissionFor(
+                            prev.university,
+                            name,
+                            row?.id,
+                          ),
+                        }))
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select registered course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                        {form.course &&
+                          !courses.some((c) => c.name === form.course) && (
+                            <SelectItem value={form.course}>{form.course}</SelectItem>
+                          )}
+                      </SelectContent>
+                    </Select>
+                    {courses.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No courses registered. Add them in Settings → Courses.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <Input
+                    value={form.course}
+                    onChange={(e) => updateField('course', e.target.value)}
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Intake</Label>

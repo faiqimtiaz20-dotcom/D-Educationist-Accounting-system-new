@@ -1,5 +1,12 @@
 import { apiFetch } from '@/lib/api-client'
-import type { Currency, SubAgent, TenantCountry, University } from '@/types'
+import type { Course, Currency, SubAgent, TenantCountry, University } from '@/types'
+
+export type ApiUniversityCourseRate = {
+  id: string
+  courseId: string
+  commissionRate: string | number
+  course?: { id: string; name: string; isActive?: boolean } | null
+}
 
 export type ApiUniversity = {
   id: string
@@ -7,15 +14,24 @@ export type ApiUniversity = {
   name: string
   countryName: string
   countryCode: string | null
+  address: string | null
+  vatNumber: string | null
   defaultCommissionRate: string | number
   currencyCode: string
   isActive: boolean
+  courseRates?: ApiUniversityCourseRate[]
 }
 
 export type ApiTenantCountry = {
   id: string
   name: string
   isoCode: string | null
+  isActive: boolean
+}
+
+export type ApiCourse = {
+  id: string
+  name: string
   isActive: boolean
 }
 
@@ -76,9 +92,29 @@ export function mapApiUniversity(u: ApiUniversity): University {
     universityNo: u.universityNo,
     name: u.name,
     country: u.countryName,
+    address: u.address ?? '',
+    vatNumber: u.vatNumber ?? '',
     defaultCommissionRate: Number(u.defaultCommissionRate),
+    courseRates: (u.courseRates ?? []).map((r) => ({
+      courseId: r.courseId,
+      courseName: r.course?.name,
+      commissionRate: Number(r.commissionRate),
+    })),
     currency: u.currencyCode as Currency,
   }
+}
+
+/** Resolve commission % for university + course (course rate, else university default). */
+export function resolveUniversityCourseRate(
+  uni: Pick<University, 'defaultCommissionRate' | 'courseRates'> | undefined,
+  courseId: string | undefined,
+): number {
+  if (!uni) return 15
+  if (courseId) {
+    const match = uni.courseRates?.find((r) => r.courseId === courseId)
+    if (match) return match.commissionRate
+  }
+  return uni.defaultCommissionRate
 }
 
 export function mapApiTenantCountry(c: ApiTenantCountry): TenantCountry {
@@ -86,6 +122,14 @@ export function mapApiTenantCountry(c: ApiTenantCountry): TenantCountry {
     id: c.id,
     name: c.name,
     isoCode: c.isoCode ?? undefined,
+    isActive: c.isActive,
+  }
+}
+
+export function mapApiCourse(c: ApiCourse): Course {
+  return {
+    id: c.id,
+    name: c.name,
     isActive: c.isActive,
   }
 }
@@ -115,8 +159,14 @@ export function universityToApiPayload(
     name: u.name,
     countryName: u.country,
     countryCode: match?.isoCode ?? COUNTRY_TO_CODE[u.country] ?? undefined,
+    address: u.address?.trim() || null,
+    vatNumber: u.vatNumber?.trim() || null,
     defaultCommissionRate: u.defaultCommissionRate,
     currencyCode: u.currency,
+    courseRates: (u.courseRates ?? []).map((r) => ({
+      courseId: r.courseId,
+      commissionRate: r.commissionRate,
+    })),
   }
 }
 
@@ -152,6 +202,14 @@ export function updateUniversity(
     payload.defaultCommissionRate = body.defaultCommissionRate
   }
   if (body.currency !== undefined) payload.currencyCode = body.currency
+  if (body.address !== undefined) payload.address = body.address?.trim() || null
+  if (body.vatNumber !== undefined) payload.vatNumber = body.vatNumber?.trim() || null
+  if (body.courseRates !== undefined) {
+    payload.courseRates = body.courseRates.map((r) => ({
+      courseId: r.courseId,
+      commissionRate: r.commissionRate,
+    }))
+  }
   return apiFetch<ApiUniversity>(`/universities/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
@@ -189,6 +247,32 @@ export function updateCountry(
 
 export function deleteCountry(id: string) {
   return apiFetch<{ success: boolean }>(`/countries/${id}`, { method: 'DELETE' })
+}
+
+export function listCourses(includeInactive = false) {
+  const q = includeInactive ? '?includeInactive=true' : ''
+  return apiFetch<ApiCourse[]>(`/courses${q}`)
+}
+
+export function createCourse(body: { name: string; isActive?: boolean }) {
+  return apiFetch<ApiCourse>('/courses', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateCourse(
+  id: string,
+  body: { name?: string; isActive?: boolean },
+) {
+  return apiFetch<ApiCourse>(`/courses/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteCourse(id: string) {
+  return apiFetch<{ success: boolean }>(`/courses/${id}`, { method: 'DELETE' })
 }
 
 export function listSubAgents() {

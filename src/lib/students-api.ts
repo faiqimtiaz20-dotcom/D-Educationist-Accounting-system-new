@@ -12,7 +12,7 @@ export type ApiStudent = {
   counsellorId: string | null
   country: string
   universityId: string
-  course: string
+  courseId: string
   intake: string
   studentGroup: string | null
   applicationStatus: ApplicationStatus
@@ -22,6 +22,7 @@ export type ApiStudent = {
   expectedCommissionRate: string | number
   currencyCode: string
   university?: { id: string; name: string; countryName: string; currencyCode: string }
+  course?: { id: string; name: string } | null
   counsellor?: { id: string; fullName: string; email: string } | null
   branch?: { id: string; code: string; name: string }
   subAgent?: { id: string; name: string } | null
@@ -37,7 +38,7 @@ export type StudentWritePayload = {
   counsellorId?: string | null
   country: string
   universityId: string
-  course: string
+  courseId: string
   intake: string
   studentGroup?: string
   applicationStatus?: ApplicationStatus
@@ -61,7 +62,8 @@ export function mapApiStudent(s: ApiStudent): Student {
     country: s.country,
     university: s.university?.name ?? s.universityId,
     universityId: s.universityId,
-    course: s.course,
+    course: s.course?.name ?? '',
+    courseId: s.courseId,
     intake: s.intake,
     group: s.studentGroup ?? '',
     applicationStatus: s.applicationStatus,
@@ -73,10 +75,11 @@ export function mapApiStudent(s: ApiStudent): Student {
   }
 }
 
-/** Map UI Student form → API write body (needs universityId resolved). */
+/** Map UI Student form → API write body (needs universityId + courseId resolved). */
 export function studentFormToApiPayload(
   form: Omit<Student, 'id'> | Student,
   universityId: string,
+  courseId: string,
 ): StudentWritePayload {
   return {
     studentCode: form.studentId.trim(),
@@ -88,7 +91,7 @@ export function studentFormToApiPayload(
     counsellorId: form.consultantId?.trim() ? form.consultantId : null,
     country: form.country,
     universityId,
-    course: form.course.trim(),
+    courseId,
     intake: form.intake.trim(),
     studentGroup: form.group?.trim() || undefined,
     applicationStatus: form.applicationStatus,

@@ -27,12 +27,24 @@ export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected'
 
 export type ReconciliationStatus = 'Matched' | 'Unmatched'
 
+export interface UniversityCourseRate {
+  courseId: string
+  courseName?: string
+  commissionRate: number
+}
+
 export interface University {
   id: string
   universityNo: string
   name: string
   country: string
+  /** Full postal address for invoice Bill To (newlines allowed). */
+  address?: string
+  vatNumber?: string
+  /** Fallback when no course-specific rate is set. */
   defaultCommissionRate: number
+  /** Per-course commission % for this university. */
+  courseRates?: UniversityCourseRate[]
   currency: Currency
 }
 
@@ -41,6 +53,13 @@ export interface TenantCountry {
   id: string
   name: string
   isoCode?: string
+  isActive?: boolean
+}
+
+/** Tenant-registered course (Settings master). */
+export interface Course {
+  id: string
+  name: string
   isActive?: boolean
 }
 
@@ -78,6 +97,8 @@ export interface Student {
   /** API university master id — used when creating invoices */
   universityId?: string
   course: string
+  /** API course master id — used when creating/updating students */
+  courseId?: string
   intake: string
   group: string
   applicationStatus: ApplicationStatus
