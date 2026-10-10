@@ -45,6 +45,7 @@ import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
 import EmailSettingsPage from '@/pages/EmailSettingsPage'
 import ProfilePage from '@/pages/ProfilePage'
 import CrmTenantsPage from '@/pages/crm/CrmTenantsPage'
+import CrmMailDeliveryPage from '@/pages/crm/CrmMailDeliveryPage'
 import type { RouteObject } from 'react-router-dom'
 
 export const routes: RouteObject[] = [
@@ -68,6 +69,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'crm/tenants', element: <CrmTenantsPage /> },
+      { path: 'crm/mail-delivery', element: <CrmMailDeliveryPage /> },
       { path: 'master-sheet', element: <MasterSheetPage /> },
       { path: 'invoices', element: <InvoicesPage /> },
       { path: 'other-invoices', element: <OtherInvoicesPage /> },

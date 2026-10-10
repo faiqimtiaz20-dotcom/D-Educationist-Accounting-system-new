@@ -62,6 +62,8 @@ App: `http://localhost:5173`
 | [docs/FSD-DE-ACC-2026.md](docs/FSD-DE-ACC-2026.md) | Functional Specification Document (FSD) |
 | [docs/FSD-MULTI-TENANT-ADDENDUM.md](docs/FSD-MULTI-TENANT-ADDENDUM.md) | Multi-tenant / CRM Admin rules |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Staging/production deploy |
+| [docs/CLOUDWAYS-MAIL-RELAY.md](docs/CLOUDWAYS-MAIL-RELAY.md) | Optional Cloudways SMTP relay (Railway SMTP block) |
+| [cloudways-mail-api/README.md](cloudways-mail-api/README.md) | Separate PHP mail API (Cloudways deploy) |
 | [docs/UAT-CHECKLIST.md](docs/UAT-CHECKLIST.md) | Client UAT + sign-off (**unsigned until client signs**) |
 | [docs/USER-GUIDE.md](docs/USER-GUIDE.md) | End-user guide (API-backed) |
 | [docs/TRAINING-AGENDA.md](docs/TRAINING-AGENDA.md) | Remote training outline |

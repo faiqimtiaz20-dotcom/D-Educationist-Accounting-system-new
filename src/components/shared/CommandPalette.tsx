@@ -40,6 +40,7 @@ const tenantRoutes = [
 
 const crmRoutes = [
   { label: 'Tenants', path: '/crm/tenants', group: 'CRM' },
+  { label: 'Email delivery', path: '/crm/mail-delivery', group: 'CRM' },
 ]
 
 interface CommandPaletteProps {

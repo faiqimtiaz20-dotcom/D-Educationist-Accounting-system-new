@@ -12,6 +12,7 @@ import {
   Calculator,
   X,
   Building2,
+  Mail,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -106,6 +107,7 @@ const navItems: NavItem[] = [
 
 const crmNavItems: NavItem[] = [
   { label: 'Tenants', icon: Building2, path: '/crm/tenants' },
+  { label: 'Email delivery', icon: Mail, path: '/crm/mail-delivery' },
 ]
 
 export function Sidebar() {
