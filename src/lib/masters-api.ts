@@ -1,10 +1,18 @@
 import { apiFetch } from '@/lib/api-client'
-import type { Course, Currency, SubAgent, TenantCountry, University } from '@/types'
+import type {
+  Course,
+  Currency,
+  SubAgent,
+  SubAgentCourseRate,
+  TenantCountry,
+  University,
+} from '@/types'
 
 export type ApiUniversityCourseRate = {
   id: string
   courseId: string
   commissionRate: string | number
+  agentCommissionRate?: string | number | null
   course?: { id: string; name: string; isActive?: boolean } | null
 }
 
@@ -17,6 +25,7 @@ export type ApiUniversity = {
   address: string | null
   vatNumber: string | null
   defaultCommissionRate: string | number
+  defaultAgentCommissionRate?: string | number | null
   currencyCode: string
   isActive: boolean
   courseRates?: ApiUniversityCourseRate[]
@@ -104,16 +113,24 @@ export function mapApiUniversity(u: ApiUniversity): University {
     address: u.address ?? '',
     vatNumber: u.vatNumber ?? '',
     defaultCommissionRate: Number(u.defaultCommissionRate),
+    defaultAgentCommissionRate:
+      u.defaultAgentCommissionRate != null && u.defaultAgentCommissionRate !== ''
+        ? Number(u.defaultAgentCommissionRate)
+        : 0,
     courseRates: (u.courseRates ?? []).map((r) => ({
       courseId: r.courseId,
       courseName: r.course?.name,
       commissionRate: Number(r.commissionRate),
+      agentCommissionRate:
+        r.agentCommissionRate != null && r.agentCommissionRate !== ''
+          ? Number(r.agentCommissionRate)
+          : 0,
     })),
     currency: u.currencyCode as Currency,
   }
 }
 
-/** Resolve commission % for university + course (course rate, else university default). */
+/** Resolve USP commission % for university + course (course rate, else university default). */
 export function resolveUniversityCourseRate(
   uni: Pick<University, 'defaultCommissionRate' | 'courseRates'> | undefined,
   courseId: string | undefined,
@@ -124,6 +141,23 @@ export function resolveUniversityCourseRate(
     if (match) return match.commissionRate
   }
   return uni.defaultCommissionRate
+}
+
+/** Resolve agent commission % for university + course (for sub-agent commission sheet). */
+export function resolveUniversityAgentCourseRate(
+  uni:
+    | Pick<University, 'defaultAgentCommissionRate' | 'courseRates'>
+    | undefined,
+  courseId: string | undefined,
+): number {
+  if (!uni) return 0
+  if (courseId) {
+    const match = uni.courseRates?.find((r) => r.courseId === courseId)
+    if (match && match.agentCommissionRate != null) {
+      return match.agentCommissionRate
+    }
+  }
+  return uni.defaultAgentCommissionRate ?? 0
 }
 
 export function mapApiTenantCountry(c: ApiTenantCountry): TenantCountry {
@@ -155,12 +189,16 @@ export function mapApiSubAgent(a: ApiSubAgent): SubAgent {
     iban: a.iban ?? '',
     accountNo: a.accountNo ?? '',
     defaultRatePercent:
-      a.defaultRatePercent != null ? Number(a.defaultRatePercent) : undefined,
-    courseRates: (a.courseRates ?? []).map((r) => ({
-      courseId: r.courseId,
-      courseName: r.course?.name,
-      commissionRate: Number(r.commissionRate),
-    })),
+      a.defaultRatePercent != null && a.defaultRatePercent !== ''
+        ? Number(a.defaultRatePercent)
+        : undefined,
+    courseRates: (a.courseRates ?? []).map(
+      (r): SubAgentCourseRate => ({
+        courseId: r.courseId,
+        courseName: r.course?.name,
+        commissionRate: Number(r.commissionRate),
+      }),
+    ),
   }
 }
 
@@ -180,13 +218,13 @@ export function resolveSubAgentCourseRate(
 export function subAgentToApiPayload(a: Omit<SubAgent, 'id' | 'subAgentNo'>) {
   return {
     name: a.name,
-    ntn: a.ntn || undefined,
-    email: a.email || undefined,
-    contact: a.contact || undefined,
-    accountTitle: a.accountTitle || undefined,
-    iban: a.iban || undefined,
-    accountNo: a.accountNo || undefined,
-    defaultRatePercent: a.defaultRatePercent,
+    ntn: a.ntn?.trim() || null,
+    email: a.email?.trim() || null,
+    contact: a.contact?.trim() || null,
+    accountTitle: a.accountTitle?.trim() || null,
+    iban: a.iban?.trim() || null,
+    accountNo: a.accountNo?.trim() || null,
+    defaultRatePercent: a.defaultRatePercent ?? null,
     courseRates: (a.courseRates ?? []).map((r) => ({
       courseId: r.courseId,
       commissionRate: r.commissionRate,
@@ -208,10 +246,12 @@ export function universityToApiPayload(
     address: u.address?.trim() || null,
     vatNumber: u.vatNumber?.trim() || null,
     defaultCommissionRate: u.defaultCommissionRate,
+    defaultAgentCommissionRate: u.defaultAgentCommissionRate ?? 0,
     currencyCode: u.currency,
     courseRates: (u.courseRates ?? []).map((r) => ({
       courseId: r.courseId,
       commissionRate: r.commissionRate,
+      agentCommissionRate: r.agentCommissionRate ?? 0,
     })),
   }
 }
@@ -247,6 +287,9 @@ export function updateUniversity(
   if (body.defaultCommissionRate !== undefined) {
     payload.defaultCommissionRate = body.defaultCommissionRate
   }
+  if (body.defaultAgentCommissionRate !== undefined) {
+    payload.defaultAgentCommissionRate = body.defaultAgentCommissionRate
+  }
   if (body.currency !== undefined) payload.currencyCode = body.currency
   if (body.address !== undefined) payload.address = body.address?.trim() || null
   if (body.vatNumber !== undefined) payload.vatNumber = body.vatNumber?.trim() || null
@@ -254,6 +297,7 @@ export function updateUniversity(
     payload.courseRates = body.courseRates.map((r) => ({
       courseId: r.courseId,
       commissionRate: r.commissionRate,
+      agentCommissionRate: r.agentCommissionRate ?? 0,
     }))
   }
   return apiFetch<ApiUniversity>(`/universities/${id}`, {
@@ -335,13 +379,17 @@ export function createSubAgent(body: Omit<SubAgent, 'id' | 'subAgentNo'>) {
 export function updateSubAgent(id: string, body: Partial<Omit<SubAgent, 'id' | 'subAgentNo'>>) {
   const payload: Record<string, unknown> = {}
   if (body.name !== undefined) payload.name = body.name
-  if (body.ntn !== undefined) payload.ntn = body.ntn || undefined
-  if (body.email !== undefined) payload.email = body.email || undefined
-  if (body.contact !== undefined) payload.contact = body.contact || undefined
-  if (body.accountTitle !== undefined) payload.accountTitle = body.accountTitle || undefined
-  if (body.iban !== undefined) payload.iban = body.iban || undefined
-  if (body.accountNo !== undefined) payload.accountNo = body.accountNo || undefined
-  if (body.defaultRatePercent !== undefined) payload.defaultRatePercent = body.defaultRatePercent
+  if (body.ntn !== undefined) payload.ntn = body.ntn?.trim() || null
+  if (body.email !== undefined) payload.email = body.email?.trim() || null
+  if (body.contact !== undefined) payload.contact = body.contact?.trim() || null
+  if (body.accountTitle !== undefined) {
+    payload.accountTitle = body.accountTitle?.trim() || null
+  }
+  if (body.iban !== undefined) payload.iban = body.iban?.trim() || null
+  if (body.accountNo !== undefined) payload.accountNo = body.accountNo?.trim() || null
+  if (body.defaultRatePercent !== undefined) {
+    payload.defaultRatePercent = body.defaultRatePercent
+  }
   if (body.courseRates !== undefined) {
     payload.courseRates = body.courseRates.map((r) => ({
       courseId: r.courseId,

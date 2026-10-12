@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { isApiMode } from '@/lib/api-client'
-import { listBankAccounts } from '@/lib/masters-api'
-import { listSubAgents, mapApiSubAgent } from '@/lib/masters-api'
+import {
+  listBankAccounts,
+  listSubAgents,
+  listUniversities,
+  mapApiSubAgent,
+  mapApiUniversity,
+} from '@/lib/masters-api'
 import {
   listCommissions,
   listPayments,
@@ -31,12 +36,13 @@ export function usePayablesApiSync() {
     if (!api) return
     setLoading(true)
     try {
-      const [comms, pays, agents, invs, students, bankRows] = await Promise.all([
+      const [comms, pays, agents, invs, students, unis, bankRows] = await Promise.all([
         listCommissions(),
         listPayments(),
         listSubAgents(),
         listInvoices(),
         listStudents(),
+        listUniversities(),
         listBankAccounts(),
       ])
       useDataStore.setState({
@@ -45,6 +51,7 @@ export function usePayablesApiSync() {
         subAgents: agents.map(mapApiSubAgent),
         invoices: invs.map(mapApiInvoice),
         students: students.map(mapApiStudent),
+        universities: unis.map(mapApiUniversity),
       })
       setBanks(
         bankRows.map((b) => ({

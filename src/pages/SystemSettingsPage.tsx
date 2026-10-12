@@ -38,7 +38,13 @@ import {
   upsertFxRate,
   type ApiCategory,
 } from '@/lib/masters-api'
-import type { Course, Currency, TenantCountry, University, UniversityCourseRate } from '@/types'
+import type {
+  Course,
+  Currency,
+  TenantCountry,
+  University,
+  UniversityCourseRate,
+} from '@/types'
 import { DEFAULT_INVOICE_BRANDING } from '@/store/settings-store'
 import { BookOpen, FileImage, Globe2, GraduationCap, Plus, Settings, Trash2, Wallet } from 'lucide-react'
 import { useSubmitState } from '@/hooks/useSubmitState'
@@ -55,6 +61,7 @@ const emptyUniversity = (defaultCountry = 'UK'): Omit<University, 'id' | 'univer
   address: '',
   vatNumber: '',
   defaultCommissionRate: 15,
+  defaultAgentCommissionRate: 10,
   courseRates: [],
   currency: 'GBP',
 })
@@ -234,6 +241,7 @@ export function SystemSettingsPage() {
       address: uni.address ?? '',
       vatNumber: uni.vatNumber ?? '',
       defaultCommissionRate: uni.defaultCommissionRate,
+      defaultAgentCommissionRate: uni.defaultAgentCommissionRate ?? 0,
       courseRates: uni.courseRates?.map((r) => ({ ...r })) ?? [],
       currency: uni.currency,
     })
@@ -259,6 +267,7 @@ export function SystemSettingsPage() {
           courseId: next.id,
           courseName: next.name,
           commissionRate: prev.defaultCommissionRate,
+          agentCommissionRate: prev.defaultAgentCommissionRate ?? 0,
         },
       ],
     }))
@@ -645,7 +654,7 @@ export function SystemSettingsPage() {
               <div>
                 <CardTitle className="text-base">Registered Universities</CardTitle>
                 <CardDescription>
-                  Manage universities with fallback and course-wise commission rates — used on Master Sheet and invoices
+                  Manage universities with USP and agent commission rates (fallback + course-wise) — used on Master Sheet, invoices, and sub-agent commissions
                 </CardDescription>
               </div>
               <Button onClick={openAddUniversity}><Plus className="mr-1 h-4 w-4" /> Register University</Button>
@@ -659,7 +668,8 @@ export function SystemSettingsPage() {
                       <TableHead>University Name</TableHead>
                       <TableHead>Country</TableHead>
                       <TableHead>Currency</TableHead>
-                      <TableHead className="text-right">Fallback %</TableHead>
+                      <TableHead className="text-right">USP %</TableHead>
+                      <TableHead className="text-right">Agent %</TableHead>
                       <TableHead className="text-right">Course rates</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
@@ -667,13 +677,13 @@ export function SystemSettingsPage() {
                   <TableBody>
                     {mastersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                           Loading…
                         </TableCell>
                       </TableRow>
                     ) : universities.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                           No universities registered yet.
                         </TableCell>
                       </TableRow>
@@ -685,6 +695,9 @@ export function SystemSettingsPage() {
                           <TableCell><Badge variant="outline">{uni.country}</Badge></TableCell>
                           <TableCell>{uni.currency}</TableCell>
                           <TableCell className="text-right font-medium">{uni.defaultCommissionRate}%</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {uni.defaultAgentCommissionRate != null ? `${uni.defaultAgentCommissionRate}%` : '—'}
+                          </TableCell>
                           <TableCell className="text-right text-muted-foreground">
                             {uni.courseRates?.length ? `${uni.courseRates.length}` : '—'}
                           </TableCell>
@@ -1282,7 +1295,7 @@ export function SystemSettingsPage() {
       </Tabs>
 
       <Dialog open={uniDialogOpen} onOpenChange={setUniDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{isEditUni ? 'Edit University' : 'Register University'}</DialogTitle>
           </DialogHeader>
@@ -1329,20 +1342,20 @@ export function SystemSettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={uniForm.currency} onValueChange={(v) => setUniForm({ ...uniForm, currency: v as Currency })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ALL_CURRENCIES.filter((c) => c !== 'PKR').map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select value={uniForm.currency} onValueChange={(v) => setUniForm({ ...uniForm, currency: v as Currency })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ALL_CURRENCIES.filter((c) => c !== 'PKR').map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Fallback Commission %</Label>
+                <Label>USP Commission % (fallback)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -1351,12 +1364,29 @@ export function SystemSettingsPage() {
                   value={uniForm.defaultCommissionRate}
                   onChange={(e) => setUniForm({ ...uniForm, defaultCommissionRate: Number(e.target.value) })}
                 />
-                <p className="text-xs text-muted-foreground">Used when a course has no specific rate below.</p>
+                <p className="text-xs text-muted-foreground">University commission — Master Sheet / invoices.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Agent Commission % (fallback)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={uniForm.defaultAgentCommissionRate ?? ''}
+                  onChange={(e) =>
+                    setUniForm({
+                      ...uniForm,
+                      defaultAgentCommissionRate: Number(e.target.value),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">Sub-agent commission sheet auto-fill.</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Label>Course-wise commission %</Label>
+                <Label>Course-wise USP &amp; Agent %</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -1370,7 +1400,7 @@ export function SystemSettingsPage() {
               </div>
               {(uniForm.courseRates ?? []).length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Optional — add rates per course. Students use the matching rate when university + course are selected.
+                  Optional — set USP and Agent % per course. Used when university + course are selected.
                 </p>
               ) : (
                 <div className="space-y-2 rounded-lg border p-3">
@@ -1384,7 +1414,10 @@ export function SystemSettingsPage() {
                       (c) => c.isActive !== false && (!usedElsewhere.has(c.id) || c.id === row.courseId),
                     )
                     return (
-                      <div key={`${row.courseId}-${index}`} className="grid grid-cols-[1fr_88px_36px] gap-2 items-end">
+                      <div
+                        key={`${row.courseId}-${index}`}
+                        className="grid grid-cols-[1fr_72px_72px_36px] gap-2 items-end"
+                      >
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Course</Label>
                           <Select
@@ -1416,7 +1449,7 @@ export function SystemSettingsPage() {
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">%</Label>
+                          <Label className="text-xs text-muted-foreground">USP %</Label>
                           <Input
                             type="number"
                             min="0"
@@ -1426,6 +1459,21 @@ export function SystemSettingsPage() {
                             onChange={(e) =>
                               updateCourseRateRow(index, {
                                 commissionRate: Number(e.target.value),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Agent %</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={row.agentCommissionRate ?? 0}
+                            onChange={(e) =>
+                              updateCourseRateRow(index, {
+                                agentCommissionRate: Number(e.target.value),
                               })
                             }
                           />

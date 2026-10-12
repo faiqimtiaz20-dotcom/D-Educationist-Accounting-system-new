@@ -5,22 +5,19 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useSubmitState } from '@/hooks/useSubmitState'
 import { isApiMode } from '@/lib/api-client'
 import {
   createSubAgent as apiCreateSubAgent,
   deleteSubAgent as apiDeleteSubAgent,
-  listCourses,
   listSubAgents,
-  mapApiCourse,
   mapApiSubAgent,
   updateSubAgent as apiUpdateSubAgent,
 } from '@/lib/masters-api'
 import { useDataStore } from '@/store/data-store'
-import type { Course, SubAgent, SubAgentCourseRate } from '@/types'
-import { Pencil, Plus, Trash2, Users } from 'lucide-react'
+import type { SubAgent } from '@/types'
+import { Pencil, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 type SubAgentForm = Omit<SubAgent, 'id' | 'subAgentNo'>
@@ -33,8 +30,6 @@ const emptyForm: SubAgentForm = {
   accountTitle: '',
   iban: '',
   accountNo: '',
-  defaultRatePercent: 10,
-  courseRates: [],
 }
 
 export default function SubAgentsPage() {
@@ -45,7 +40,6 @@ export default function SubAgentsPage() {
 
   const api = isApiMode()
   const [apiSubAgents, setApiSubAgents] = useState<SubAgent[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(api)
 
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -57,9 +51,8 @@ export default function SubAgentsPage() {
     if (!api) return
     setLoading(true)
     try {
-      const [rows, courseRows] = await Promise.all([listSubAgents(), listCourses()])
+      const rows = await listSubAgents()
       setApiSubAgents(rows.map(mapApiSubAgent))
-      setCourses(courseRows.map(mapApiCourse))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to load sub-agents')
     } finally {
@@ -75,7 +68,7 @@ export default function SubAgentsPage() {
 
   const openAdd = () => {
     setEditingId(null)
-    setForm({ ...emptyForm, courseRates: [] })
+    setForm({ ...emptyForm })
     setSheetOpen(true)
   }
 
@@ -89,65 +82,13 @@ export default function SubAgentsPage() {
       accountTitle: agent.accountTitle,
       iban: agent.iban,
       accountNo: agent.accountNo,
-      defaultRatePercent: agent.defaultRatePercent ?? 10,
-      courseRates: agent.courseRates?.map((r) => ({ ...r })) ?? [],
     })
     setSheetOpen(true)
-  }
-
-  const addCourseRateRow = () => {
-    setForm((prev) => {
-      const used = new Set((prev.courseRates ?? []).map((r) => r.courseId))
-      const next = courses.find((c) => c.isActive !== false && !used.has(c.id))
-      if (!next) {
-        toast.error(
-          courses.length === 0
-            ? 'Add courses under Settings → Courses first'
-            : 'All courses already have a rate',
-        )
-        return prev
-      }
-      return {
-        ...prev,
-        courseRates: [
-          ...(prev.courseRates ?? []),
-          {
-            courseId: next.id,
-            courseName: next.name,
-            commissionRate: prev.defaultRatePercent ?? 10,
-          },
-        ],
-      }
-    })
-  }
-
-  const updateCourseRateRow = (index: number, patch: Partial<SubAgentCourseRate>) => {
-    setForm((prev) => {
-      const rows = [...(prev.courseRates ?? [])]
-      rows[index] = { ...rows[index], ...patch }
-      return { ...prev, courseRates: rows }
-    })
-  }
-
-  const removeCourseRateRow = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      courseRates: (prev.courseRates ?? []).filter((_, i) => i !== index),
-    }))
   }
 
   const handleSave = async () => {
     if (!form.name.trim()) {
       toast.error('Sub-agent name is required')
-      return
-    }
-    const rateIds = (form.courseRates ?? []).map((r) => r.courseId)
-    if (rateIds.some((id) => !id)) {
-      toast.error('Select a course for each course rate row')
-      return
-    }
-    if (new Set(rateIds).size !== rateIds.length) {
-      toast.error('Each course can only appear once in course rates')
       return
     }
 
@@ -200,25 +141,12 @@ export default function SubAgentsPage() {
       cell: (r) => <span className="font-medium">{r.subAgentNo || '—'}</span>,
     },
     { key: 'name', header: 'Sub-Agent Name', cell: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'ntn', header: 'NTN', cell: (r) => r.ntn || '—' },
-    { key: 'email', header: 'Email', cell: (r) => r.email || '—' },
-    { key: 'contact', header: 'Contact', cell: (r) => r.contact || '—' },
-    {
-      key: 'fallback',
-      header: 'Fallback %',
-      className: 'text-right',
-      cell: (r) => (
-        <span className="font-medium">
-          {r.defaultRatePercent != null ? `${r.defaultRatePercent}%` : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'courseRates',
-      header: 'Course rates',
-      className: 'text-right',
-      cell: (r) => (r.courseRates?.length ? `${r.courseRates.length}` : '—'),
-    },
+    { key: 'ntn', header: 'NTN', cell: (r) => r.ntn },
+    { key: 'email', header: 'Email', cell: (r) => r.email },
+    { key: 'contact', header: 'Contact', cell: (r) => r.contact },
+    { key: 'accountTitle', header: 'A/c Title', cell: (r) => r.accountTitle },
+    { key: 'iban', header: 'IBAN', cell: (r) => <span className="font-mono text-xs">{r.iban}</span> },
+    { key: 'accountNo', header: 'Account No.', cell: (r) => r.accountNo },
     {
       key: 'actions',
       header: '',
@@ -244,7 +172,7 @@ export default function SubAgentsPage() {
       <>
       <PageHeader
         title="Sub-Agent Master"
-        subtitle={`Manage agents with fallback and course-wise commission rates — used when creating sub-agent commissions${api ? ' (API)' : ''}`}
+        subtitle={`${subAgents.length} sub-agents registered${api ? ' (API)' : ''}`}
         actionLabel="Add Sub-Agent"
         onAction={openAdd}
       >
@@ -265,7 +193,7 @@ export default function SubAgentsPage() {
       />
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-lg">
+        <SheetContent>
           <SheetHeader>
             <SheetTitle>{editingId ? 'Edit Sub-Agent' : 'Add Sub-Agent'}</SheetTitle>
           </SheetHeader>
@@ -297,116 +225,6 @@ export default function SubAgentsPage() {
             <div className="space-y-2">
               <Label>Account No.</Label>
               <Input value={form.accountNo} onChange={(e) => setForm({ ...form, accountNo: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Fallback Commission %</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={form.defaultRatePercent ?? ''}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    defaultRatePercent: e.target.value === '' ? undefined : Number(e.target.value),
-                  })
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                Used when a course has no specific rate below — picked on Sub-Agent Commission create.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label>Course-wise commission %</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={addCourseRateRow}
-                  disabled={api && courses.length === 0}
-                >
-                  <Plus className="mr-1 h-3.5 w-3.5" /> Add course rate
-                </Button>
-              </div>
-              {(form.courseRates ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Optional — add rates per course. Commission form uses the matching rate when agent + student course are selected.
-                </p>
-              ) : (
-                <div className="space-y-2 rounded-lg border p-3">
-                  {(form.courseRates ?? []).map((row, index) => {
-                    const usedElsewhere = new Set(
-                      (form.courseRates ?? [])
-                        .filter((_, i) => i !== index)
-                        .map((r) => r.courseId),
-                    )
-                    const options = courses.filter(
-                      (c) => c.isActive !== false && (!usedElsewhere.has(c.id) || c.id === row.courseId),
-                    )
-                    return (
-                      <div key={`${row.courseId}-${index}`} className="grid grid-cols-[1fr_88px_36px] gap-2 items-end">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Course</Label>
-                          <Select
-                            value={row.courseId || undefined}
-                            onValueChange={(courseId) => {
-                              const c = courses.find((x) => x.id === courseId)
-                              updateCourseRateRow(index, {
-                                courseId,
-                                courseName: c?.name,
-                              })
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select course" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {options.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                              {row.courseId &&
-                                !options.some((c) => c.id === row.courseId) && (
-                                  <SelectItem value={row.courseId}>
-                                    {row.courseName || row.courseId}
-                                  </SelectItem>
-                                )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">%</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step="0.1"
-                            value={row.commissionRate}
-                            onChange={(e) =>
-                              updateCourseRateRow(index, {
-                                commissionRate: Number(e.target.value),
-                              })
-                            }
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground"
-                          onClick={() => removeCourseRateRow(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
             </div>
             <Button className="w-full" onClick={() => void handleSave()} loading={submitting}>
               {editingId ? 'Update' : 'Add'} Sub-Agent

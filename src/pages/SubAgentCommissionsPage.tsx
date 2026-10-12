@@ -18,31 +18,19 @@ import { useSubmitState } from '@/hooks/useSubmitState'
 import { calcWHT, formatCurrency, subAgentPayable } from '@/lib/calculations'
 import { getInvoiceLineTotal, getInvoiceTotal } from '@/lib/invoice'
 import { branchFilterOptions, currencyFilterOptions } from '@/lib/filter-options'
-import { resolveSubAgentCourseRate } from '@/lib/masters-api'
+import { resolveUniversityAgentCourseRate } from '@/lib/masters-api'
 import {
   createCommission as apiCreateCommission,
   deleteCommission as apiDeleteCommission,
   updateCommission as apiUpdateCommission,
 } from '@/lib/payables-api'
 import { useDataStore } from '@/store/data-store'
-import type { Currency, SubAgent, SubAgentCommission } from '@/types'
+import type { Currency, SubAgentCommission } from '@/types'
 import { HandCoins, Plus, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 function commissionGrossPKR(c: SubAgentCommission): number {
   return c.grossFee * (c.rateGiven / 100) * c.exchangeRate + c.followOnBonus
-}
-
-function pickAgentRate(
-  agents: SubAgent[],
-  subAgentId: string | undefined,
-  courseId: string | undefined,
-): number {
-  if (!subAgentId) return 0
-  return resolveSubAgentCourseRate(
-    agents.find((a) => a.id === subAgentId),
-    courseId,
-  )
 }
 
 const emptyCommission = {
@@ -62,6 +50,7 @@ export default function SubAgentCommissionsPage() {
   const { api, reload, loading } = usePayablesApiSync()
   const subAgentCommissions = useDataStore((s) => s.subAgentCommissions)
   const subAgents = useDataStore((s) => s.subAgents)
+  const universities = useDataStore((s) => s.universities)
   const addSubAgentCommission = useDataStore((s) => s.addSubAgentCommission)
   const updateSubAgentCommission = useDataStore((s) => s.updateSubAgentCommission)
   const deleteSubAgentCommission = useDataStore((s) => s.deleteSubAgentCommission)
@@ -82,6 +71,20 @@ export default function SubAgentCommissionsPage() {
   const { submitting, runSubmit } = useSubmitState()
 
   const netPreview = subAgentPayable(form.grossFee, form.rateGiven, form.exchangeRate, form.followOnBonus)
+
+  /** Agent % from student's university + course (Settings → Registered Universities). */
+  const pickAgentRate = (studentId: string) => {
+    const student = students.find((s) => s.id === studentId)
+    if (!student) return 0
+    const uni =
+      (student.universityId
+        ? universities.find((u) => u.id === student.universityId)
+        : undefined) ??
+      universities.find(
+        (u) => u.name.toLowerCase() === student.university.trim().toLowerCase(),
+      )
+    return resolveUniversityAgentCourseRate(uni, student.courseId)
+  }
 
   const openCreate = () => {
     setIsEdit(false)
@@ -130,14 +133,13 @@ export default function SubAgentCommissionsPage() {
       return
     }
     const firstLine = invoice.lines?.[0]
-    const studentId = firstLine?.studentId ?? ''
-    const student = studentId ? getStudent(studentId) : undefined
     // Gross fee base = commission earned (not tuition), so sub-agent % is of our income
     const commissionBase = firstLine
       ? getInvoiceLineTotal(firstLine)
       : getInvoiceTotal(invoice)
+    const studentId = firstLine?.studentId ?? ''
     setForm((p) => {
-      const rateGiven = pickAgentRate(subAgents, p.subAgentId, student?.courseId)
+      const rateGiven = !isEdit ? pickAgentRate(studentId) : p.rateGiven
       return {
         ...p,
         invoiceId,
@@ -145,20 +147,16 @@ export default function SubAgentCommissionsPage() {
         branchId: invoice.branchId,
         currency: invoice.currency,
         grossFee: commissionBase,
-        ...(rateGiven > 0 ? { rateGiven } : {}),
+        rateGiven,
       }
     })
   }
 
   const selectSubAgent = (subAgentId: string) => {
     setForm((p) => {
-      const student = p.studentId ? getStudent(p.studentId) : undefined
-      const rateGiven = pickAgentRate(subAgents, subAgentId, student?.courseId)
-      return {
-        ...p,
-        subAgentId,
-        ...(rateGiven > 0 ? { rateGiven } : {}),
-      }
+      const rateGiven =
+        !isEdit && p.studentId ? pickAgentRate(p.studentId) : p.rateGiven
+      return { ...p, subAgentId, rateGiven }
     })
   }
 
@@ -371,10 +369,7 @@ export default function SubAgentCommissionsPage() {
                   <SelectTrigger><SelectValue placeholder="Select sub-agent" /></SelectTrigger>
                   <SelectContent>
                     {subAgents.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name}
-                        {a.defaultRatePercent != null ? ` (${a.defaultRatePercent}% fallback)` : ''}
-                      </SelectItem>
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -412,20 +407,12 @@ export default function SubAgentCommissionsPage() {
                           value={form.studentId}
                           onValueChange={(v) => {
                             const line = lines.find((l) => l.studentId === v)
-                            const student = getStudent(v)
-                            setForm((p) => {
-                              const rateGiven = pickAgentRate(
-                                subAgents,
-                                p.subAgentId,
-                                student?.courseId,
-                              )
-                              return {
-                                ...p,
-                                studentId: v,
-                                grossFee: line ? getInvoiceLineTotal(line) : p.grossFee,
-                                ...(rateGiven > 0 ? { rateGiven } : {}),
-                              }
-                            })
+                            setForm((p) => ({
+                              ...p,
+                              studentId: v,
+                              grossFee: line ? getInvoiceLineTotal(line) : p.grossFee,
+                              rateGiven: !isEdit ? pickAgentRate(v) : p.rateGiven,
+                            }))
                           }}
                         >
                           <SelectTrigger><SelectValue placeholder="Select student on invoice" /></SelectTrigger>
@@ -465,9 +452,9 @@ export default function SubAgentCommissionsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Rate Given (%)</Label>
-                <Input type="number" min={0} max={100} step="0.1" value={form.rateGiven || ''} onChange={(e) => setForm((p) => ({ ...p, rateGiven: Number(e.target.value) }))} />
+                <Input type="number" min={0} max={100} value={form.rateGiven || ''} onChange={(e) => setForm((p) => ({ ...p, rateGiven: Number(e.target.value) }))} />
                 <p className="text-xs text-muted-foreground">
-                  Auto-filled from agent course rate (or fallback %). You can override.
+                  Auto-filled from Settings → Registered Universities (Agent % for student&apos;s university + course). You can override.
                 </p>
               </div>
               <div className="space-y-2">

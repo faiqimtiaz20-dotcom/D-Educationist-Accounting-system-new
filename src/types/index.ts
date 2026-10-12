@@ -30,7 +30,10 @@ export type ReconciliationStatus = 'Matched' | 'Unmatched'
 export interface UniversityCourseRate {
   courseId: string
   courseName?: string
+  /** USP / university commission % for this course. */
   commissionRate: number
+  /** Agent commission % for this course (sub-agent payout). */
+  agentCommissionRate?: number
 }
 
 export interface University {
@@ -41,9 +44,11 @@ export interface University {
   /** Full postal address for invoice Bill To (newlines allowed). */
   address?: string
   vatNumber?: string
-  /** Fallback when no course-specific rate is set. */
+  /** USP fallback when no course-specific rate is set. */
   defaultCommissionRate: number
-  /** Per-course commission % for this university. */
+  /** Agent commission fallback % (sub-agent commission sheet). */
+  defaultAgentCommissionRate?: number
+  /** Per-course USP + agent commission % for this university. */
   courseRates?: UniversityCourseRate[]
   currency: Currency
 }
