@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { isApiMode } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { isValidElement, useMemo, useState, type ReactNode } from 'react'
@@ -69,10 +70,10 @@ interface DataTableProps<T> {
   onStatusChange?: (status: string) => void
   filters?: FilterConfig<T>[]
   /**
-   * When no column sort is active, show the most recently added rows first.
-   * Store arrays append new records at the end, so this reverses the incoming
-   * order by default. Set false for data that is already stored newest-first
-   * (e.g. audit logs).
+   * When no column sort is active:
+   * - API mode default `false` — keep server order (lists already return newest-first).
+   * - Mock mode default `true` — reverse store arrays (new rows are appended at the end).
+   * Set `false` for chronological ledgers / running balances.
    */
   newestFirst?: boolean
 }
@@ -93,8 +94,12 @@ export function DataTable<T>({
   activeStatus = 'all',
   onStatusChange,
   filters,
-  newestFirst = true,
+  newestFirst,
 }: DataTableProps<T>) {
+  // API lists are already newest-first; reversing them showed oldest first (bug).
+  // Mock store appends at the end, so reverse only in mock mode unless overridden.
+  const showNewestFirst = newestFirst ?? !isApiMode()
+
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [showFilters, setShowFilters] = useState(false)
@@ -161,7 +166,7 @@ export function DataTable<T>({
   }, [data, filters, filterState, search, searchFilter])
 
   const sorted = useMemo(() => {
-    if (!sortKey) return newestFirst ? [...filtered].reverse() : filtered
+    if (!sortKey) return showNewestFirst ? [...filtered].reverse() : filtered
     const col = columns.find((c) => c.key === sortKey)
     if (!col || !isSortable(col)) return filtered
     const getValue = (row: T): string | number => {
@@ -172,7 +177,7 @@ export function DataTable<T>({
     const factor = sortDir === 'asc' ? 1 : -1
     return [...filtered].sort((a, b) => factor * compareValues(getValue(a), getValue(b)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, columns, sortKey, sortDir, newestFirst])
+  }, [filtered, columns, sortKey, sortDir, showNewestFirst])
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const currentPage = Math.min(page, totalPages - 1)

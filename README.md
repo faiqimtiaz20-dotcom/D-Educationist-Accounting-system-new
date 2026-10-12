@@ -60,6 +60,7 @@ App: `http://localhost:5173`
 | [docs/DUAL-TENANT-PROOF.md](docs/DUAL-TENANT-PROOF.md) | Staging dual-tenant proof (engineering) |
 | [docs/TRAINING-CRM-VS-TENANT-ADMIN.md](docs/TRAINING-CRM-VS-TENANT-ADMIN.md) | CRM vs Tenant Admin training |
 | [docs/FSD-DE-ACC-2026.md](docs/FSD-DE-ACC-2026.md) | Functional Specification Document (FSD) |
+| [docs/FSD-TENANT-QA.md](docs/FSD-TENANT-QA.md) | **Tenant FSD for QA / UAT** (roles, FR IDs, E2E, isolation) |
 | [docs/FSD-MULTI-TENANT-ADDENDUM.md](docs/FSD-MULTI-TENANT-ADDENDUM.md) | Multi-tenant / CRM Admin rules |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Staging/production deploy |
 | [docs/CLOUDWAYS-MAIL-RELAY.md](docs/CLOUDWAYS-MAIL-RELAY.md) | Optional Cloudways SMTP relay (Railway SMTP block) |
