@@ -40,6 +40,13 @@ export type ApiInvoice = {
   exchangeRate: string | number | null
   notes: string | null
   branch?: { id: string; code: string; name: string } | null
+  university?: {
+    id: string
+    name: string
+    countryName?: string
+    address?: string | null
+    vatNumber?: string | null
+  } | null
   lines: Array<{
     id: string
     studentId: string
@@ -105,6 +112,10 @@ export function mapApiInvoice(inv: ApiInvoice): Invoice {
     invoiceNo: inv.invoiceNo,
     branchId: inv.branchId,
     branchName: inv.branch?.name,
+    universityId: inv.universityId ?? inv.university?.id ?? undefined,
+    universityName: inv.university?.name ?? undefined,
+    universityAddress: inv.university?.address ?? undefined,
+    universityVatNumber: inv.university?.vatNumber ?? undefined,
     invoiceDate: toDateOnly(inv.invoiceDate),
     poNumber: inv.poNumber ?? undefined,
     currency: inv.currencyCode as Currency,
@@ -188,6 +199,8 @@ export function createInvoice(body: {
   status?: string
   exchangeRate?: number
   notes?: string
+  universityAddress?: string | null
+  universityVatNumber?: string | null
   lines: Array<{
     studentId: string
     tuitionFee: number
@@ -212,6 +225,8 @@ export function updateInvoice(
     status?: string
     exchangeRate?: number | null
     notes?: string | null
+    universityAddress?: string | null
+    universityVatNumber?: string | null
     lines?: Array<{
       studentId: string
       tuitionFee: number
@@ -241,6 +256,35 @@ export function sendInvoice(
     method: 'POST',
     body: JSON.stringify(email ?? {}),
   })
+}
+
+/** Download commission invoice PDF (same layout as email attachment). */
+export async function downloadInvoicePdf(id: string, invoiceNo?: string) {
+  const { getApiBaseUrl, loadTokens, ApiError } = await import('@/lib/api-client')
+  const tokens = loadTokens()
+  const res = await fetch(`${getApiBaseUrl()}/invoices/${id}/pdf`, {
+    headers: tokens?.accessToken
+      ? { Authorization: `Bearer ${tokens.accessToken}` }
+      : undefined,
+  })
+  if (!res.ok) {
+    let message = `PDF download failed (${res.status})`
+    try {
+      const body = (await res.json()) as { message?: string | string[] }
+      if (Array.isArray(body.message)) message = body.message.join(', ')
+      else if (body.message) message = body.message
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(res.status, message)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = invoiceNo ? `invoice-${invoiceNo}.pdf` : `invoice-${id}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export function deleteInvoice(id: string) {

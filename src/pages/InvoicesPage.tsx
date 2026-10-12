@@ -40,13 +40,15 @@ import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
 import {
   createInvoice as apiCreateInvoice,
   deleteInvoice as apiDeleteInvoice,
+  downloadInvoicePdf as apiDownloadInvoicePdf,
   invoiceFormToApiLines,
   invoiceStatusToApi,
   sendInvoice as apiSendInvoice,
   updateInvoice as apiUpdateInvoice,
 } from '@/lib/revenue-api'
-import type { Currency, Invoice, InvoiceLine, InvoiceStatus } from '@/types'
-import { CheckCircle2, Eye, FileText, MoreHorizontal, Pencil, Send, Trash2, Wallet } from 'lucide-react'
+import { listUniversities, mapApiUniversity } from '@/lib/masters-api'
+import type { Currency, Invoice, InvoiceLine, InvoiceStatus, University } from '@/types'
+import { CheckCircle2, Download, Eye, FileText, MoreHorizontal, Pencil, Send, Trash2, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -77,6 +79,8 @@ const emptyForm = {
   currency: 'GBP' as Currency,
   status: 'Draft' as InvoiceStatus,
   lines: [] as InvoiceLine[],
+  universityAddress: '',
+  universityVatNumber: '',
 }
 
 let lineSeq = 0
@@ -140,6 +144,9 @@ export default function InvoicesPage() {
   const [emailForm, setEmailForm] = useState({ to: '', cc: '', subject: '', body: '' })
   const [studentSearch, setStudentSearch] = useState('')
   const [universityFilter, setUniversityFilter] = useState('all')
+  const [universities, setUniversities] = useState<University[]>([])
+  /** Tracks which university Bill To fields were last loaded from, so user edits stick. */
+  const [billToUniKey, setBillToUniKey] = useState<string | null>(null)
   const { submitting: saving, runSubmit: runSave } = useSubmitState()
   const { submitting: sending, runSubmit: runSend } = useSubmitState()
   const { submitting: markingSent, runSubmit: runMarkSent } = useSubmitState()
@@ -175,6 +182,51 @@ export default function InvoicesPage() {
     return getStudent(form.lines[0].studentId)?.university ?? null
   }, [form.lines, students])
 
+  const billToUniversityId = useMemo(() => {
+    return (
+      form.lines
+        .map((l) => getStudent(l.studentId)?.universityId)
+        .find((id): id is string => Boolean(id)) ?? undefined
+    )
+  }, [form.lines, students])
+
+  const billToUniversity = useMemo(() => {
+    if (!billToUniversityId) return undefined
+    return universities.find((u) => u.id === billToUniversityId)
+  }, [billToUniversityId, universities])
+
+  useEffect(() => {
+    if (!api || !dialogOpen) return
+    let cancelled = false
+    void listUniversities()
+      .then((rows) => {
+        if (!cancelled) setUniversities(rows.map(mapApiUniversity))
+      })
+      .catch(() => {
+        if (!cancelled) setUniversities([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [api, dialogOpen])
+
+  useEffect(() => {
+    if (!billToUniversity) {
+      if (billToUniKey) {
+        setBillToUniKey(null)
+        setForm((p) => ({ ...p, universityAddress: '', universityVatNumber: '' }))
+      }
+      return
+    }
+    if (billToUniversity.id === billToUniKey) return
+    setBillToUniKey(billToUniversity.id)
+    setForm((p) => ({
+      ...p,
+      universityAddress: billToUniversity.address ?? '',
+      universityVatNumber: billToUniversity.vatNumber ?? '',
+    }))
+  }, [billToUniversity, billToUniKey])
+
   const universityOptions = useMemo(() => {
     const names = [...new Set(branchStudents.map((s) => s.university).filter(Boolean))].sort()
     return names.map((name) => ({ label: name, value: name }))
@@ -198,6 +250,7 @@ export default function InvoicesPage() {
     setIsEdit(false)
     setEditId(null)
     setForm(emptyForm)
+    setBillToUniKey(null)
     setStudentSearch('')
     setUniversityFilter('all')
     setDialogOpen(true)
@@ -213,7 +266,10 @@ export default function InvoicesPage() {
       currency: invoice.currency,
       status: invoice.status,
       lines: invoice.lines.map((l) => ({ ...l })),
+      universityAddress: invoice.universityAddress ?? '',
+      universityVatNumber: invoice.universityVatNumber ?? '',
     })
+    setBillToUniKey(invoice.universityId ?? null)
     setStudentSearch('')
     const firstUni = invoice.lines[0]
       ? students.find((s) => s.id === invoice.lines[0].studentId)?.university
@@ -272,6 +328,19 @@ export default function InvoicesPage() {
     }
     setIsResend(true)
     prefillEmail(invoice)
+  }
+
+  const handleDownloadPdf = async (invoice: Invoice) => {
+    if (!api) {
+      toast.error('PDF download requires API mode')
+      return
+    }
+    try {
+      await apiDownloadInvoicePdf(invoice.id, invoice.invoiceNo)
+      toast.success(`Downloaded ${invoice.invoiceNo}.pdf`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'PDF download failed')
+    }
   }
 
   /** Draft → Sent (+ GL) without requiring SMTP / recipient. */
@@ -500,6 +569,8 @@ export default function InvoicesPage() {
             poNumber: form.poNumber || undefined,
             currencyCode: form.currency,
             status: invoiceStatusToApi(isEdit ? form.status : 'Draft'),
+            universityAddress: form.universityAddress.trim() || null,
+            universityVatNumber: form.universityVatNumber.trim() || null,
             lines: invoiceFormToApiLines(form.lines),
           }
           if (isEdit && editId) {
@@ -636,6 +707,16 @@ export default function InvoicesPage() {
             <DropdownMenuItem onClick={() => setPreviewInvoice(row)}>
               <Eye /> Preview
             </DropdownMenuItem>
+            {api && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault()
+                  void handleDownloadPdf(row)
+                }}
+              >
+                <Download /> Download PDF
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setPaymentInvoiceId(row.id)}>
               <Wallet /> Payment history
             </DropdownMenuItem>
@@ -813,6 +894,43 @@ export default function InvoicesPage() {
                 )}
               </div>
             </div>
+
+            {(lockedUniversity || billToUniversity) && (
+              <div className="space-y-3 rounded-lg border p-3">
+                <div>
+                  <Label>Bill To (university)</Label>
+                  <p className="text-sm font-medium">
+                    {billToUniversity?.name ?? lockedUniversity}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Address and VAT appear on the invoice PDF. Saving updates the university master.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="uni-address">University address</Label>
+                  <Textarea
+                    id="uni-address"
+                    rows={3}
+                    value={form.universityAddress}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, universityAddress: e.target.value }))
+                    }
+                    placeholder="Head office / billing address"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="uni-vat">VAT number</Label>
+                  <Input
+                    id="uni-vat"
+                    value={form.universityVatNumber}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, universityVatNumber: e.target.value }))
+                    }
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+            )}
 
             {form.lines.length > 0 && (
               <div className="space-y-3">
@@ -1007,7 +1125,11 @@ export default function InvoicesPage() {
                     </Button>
                   </>
                 )}
-                <Button onClick={() => toast.success('PDF export started')}>Export PDF</Button>
+                {api && (
+                  <Button onClick={() => void handleDownloadPdf(previewInvoice)}>
+                    <Download className="mr-1.5 h-4 w-4" /> Download PDF
+                  </Button>
+                )}
               </div>
             </div>
           )}
