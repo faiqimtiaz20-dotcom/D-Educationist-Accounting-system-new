@@ -35,6 +35,13 @@ export type ApiCourse = {
   isActive: boolean
 }
 
+export type ApiSubAgentCourseRate = {
+  id: string
+  courseId: string
+  commissionRate: string | number
+  course?: { id: string; name: string; isActive?: boolean } | null
+}
+
 export type ApiSubAgent = {
   id: string
   subAgentNo: string
@@ -45,7 +52,9 @@ export type ApiSubAgent = {
   accountTitle: string | null
   iban: string | null
   accountNo: string | null
+  defaultRatePercent: string | number | null
   isActive: boolean
+  courseRates?: ApiSubAgentCourseRate[]
 }
 
 export type ApiCategory = {
@@ -145,6 +154,43 @@ export function mapApiSubAgent(a: ApiSubAgent): SubAgent {
     accountTitle: a.accountTitle ?? '',
     iban: a.iban ?? '',
     accountNo: a.accountNo ?? '',
+    defaultRatePercent:
+      a.defaultRatePercent != null ? Number(a.defaultRatePercent) : undefined,
+    courseRates: (a.courseRates ?? []).map((r) => ({
+      courseId: r.courseId,
+      courseName: r.course?.name,
+      commissionRate: Number(r.commissionRate),
+    })),
+  }
+}
+
+/** Resolve commission % for sub-agent + course (course rate, else agent fallback). */
+export function resolveSubAgentCourseRate(
+  agent: Pick<SubAgent, 'defaultRatePercent' | 'courseRates'> | undefined,
+  courseId: string | undefined,
+): number {
+  if (!agent) return 0
+  if (courseId) {
+    const match = agent.courseRates?.find((r) => r.courseId === courseId)
+    if (match) return match.commissionRate
+  }
+  return agent.defaultRatePercent ?? 0
+}
+
+export function subAgentToApiPayload(a: Omit<SubAgent, 'id' | 'subAgentNo'>) {
+  return {
+    name: a.name,
+    ntn: a.ntn || undefined,
+    email: a.email || undefined,
+    contact: a.contact || undefined,
+    accountTitle: a.accountTitle || undefined,
+    iban: a.iban || undefined,
+    accountNo: a.accountNo || undefined,
+    defaultRatePercent: a.defaultRatePercent,
+    courseRates: (a.courseRates ?? []).map((r) => ({
+      courseId: r.courseId,
+      commissionRate: r.commissionRate,
+    })),
   }
 }
 
@@ -282,14 +328,29 @@ export function listSubAgents() {
 export function createSubAgent(body: Omit<SubAgent, 'id' | 'subAgentNo'>) {
   return apiFetch<ApiSubAgent>('/sub-agents', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(subAgentToApiPayload(body)),
   })
 }
 
 export function updateSubAgent(id: string, body: Partial<Omit<SubAgent, 'id' | 'subAgentNo'>>) {
+  const payload: Record<string, unknown> = {}
+  if (body.name !== undefined) payload.name = body.name
+  if (body.ntn !== undefined) payload.ntn = body.ntn || undefined
+  if (body.email !== undefined) payload.email = body.email || undefined
+  if (body.contact !== undefined) payload.contact = body.contact || undefined
+  if (body.accountTitle !== undefined) payload.accountTitle = body.accountTitle || undefined
+  if (body.iban !== undefined) payload.iban = body.iban || undefined
+  if (body.accountNo !== undefined) payload.accountNo = body.accountNo || undefined
+  if (body.defaultRatePercent !== undefined) payload.defaultRatePercent = body.defaultRatePercent
+  if (body.courseRates !== undefined) {
+    payload.courseRates = body.courseRates.map((r) => ({
+      courseId: r.courseId,
+      commissionRate: r.commissionRate,
+    }))
+  }
   return apiFetch<ApiSubAgent>(`/sub-agents/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   })
 }
 

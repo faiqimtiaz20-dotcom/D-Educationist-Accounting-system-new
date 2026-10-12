@@ -180,6 +180,12 @@ export interface ReceivableAllocation {
   currency: Currency
 }
 
+export interface SubAgentCourseRate {
+  courseId: string
+  courseName?: string
+  commissionRate: number
+}
+
 export interface SubAgent {
   id: string
   subAgentNo: string
@@ -190,6 +196,10 @@ export interface SubAgent {
   accountTitle: string
   iban: string
   accountNo: string
+  /** Fallback when no course-specific rate is set. */
+  defaultRatePercent?: number
+  /** Per-course commission % for this sub-agent. */
+  courseRates?: SubAgentCourseRate[]
 }
 
 export interface SubAgentCommission {
