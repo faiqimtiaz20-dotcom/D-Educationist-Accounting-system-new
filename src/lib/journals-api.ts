@@ -190,6 +190,57 @@ export function getGlChart() {
   return apiFetch<ApiCoaNode[]>('/gl/chart')
 }
 
+export type ApiGlAccountActivity = {
+  account: {
+    id: string
+    code: string
+    name: string
+    accountType: string
+  }
+  entries: Array<{
+    journalEntryId: string
+    entryNo: string
+    date: string
+    description: string
+    sourceType: string | null
+    debit: number
+    credit: number
+    balance: number
+    memo: string | null
+  }>
+  closingBalance: number
+}
+
+export function getGlAccountActivity(
+  code: string,
+  opts?: { from?: string; to?: string; branchId?: string },
+) {
+  const q = new URLSearchParams()
+  if (opts?.from) q.set('from', opts.from)
+  if (opts?.to) q.set('to', opts.to)
+  if (opts?.branchId) q.set('branchId', opts.branchId)
+  const qs = q.toString()
+  return apiFetch<ApiGlAccountActivity>(
+    `/gl/accounts/${encodeURIComponent(code)}/activity${qs ? `?${qs}` : ''}`,
+  )
+}
+
+export function mapGlActivityEntries(
+  data: ApiGlAccountActivity,
+): LedgerEntry[] {
+  return data.entries.map((e) => ({
+    id: `${e.journalEntryId}-${e.entryNo}`,
+    date: e.date,
+    description: e.memo
+      ? `${e.description} — ${e.memo}`
+      : e.description,
+    debit: e.debit,
+    credit: e.credit,
+    reference: e.entryNo,
+    balance: e.balance,
+  }))
+}
+
 export function getStudentLedger(id: string) {
   return apiFetch<ApiPartyLedger>(`/ledgers/students/${id}`)
 }

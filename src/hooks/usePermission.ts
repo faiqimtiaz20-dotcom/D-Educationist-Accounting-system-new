@@ -22,8 +22,18 @@ export function useModulePermission(moduleName: string) {
 
 export function useRoutePermission(pathname: string) {
   const moduleName = getPermissionModuleForPath(pathname)
+  // Always call the hook. /profile and /crm have no matrix module; skipping
+  // the hook here changes the hook count and crashes the page.
+  const perm = useModulePermission(moduleName ?? 'Dashboard & Reports')
   if (!moduleName) {
-    return { canView: true, canWrite: true, canApprove: true, isReadOnly: false, isHidden: false, level: 'full' as PermissionLevel }
+    return {
+      canView: true,
+      canWrite: true,
+      canApprove: true,
+      isReadOnly: false,
+      isHidden: false,
+      level: 'full' as PermissionLevel,
+    }
   }
-  return useModulePermission(moduleName)
+  return perm
 }
