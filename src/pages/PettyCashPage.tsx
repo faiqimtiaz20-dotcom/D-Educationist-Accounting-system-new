@@ -10,12 +10,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useCurrentUser } from '@/hooks/useAuth'
 import { useBranchFilter } from '@/hooks/useBranchFilter'
 import { useCashApiSync } from '@/hooks/useCashApiSync'
 import { useSubmitState } from '@/hooks/useSubmitState'
 import { formatCurrency, pettyCashTotal } from '@/lib/calculations'
 import { createPettyCash as apiCreatePettyCash } from '@/lib/cash-api'
 import { branchFilterOptions } from '@/lib/filter-options'
+import { canTopUpPettyCash } from '@/lib/permissions'
 import { useAppStore } from '@/store/app-store'
 import { useDataStore } from '@/store/data-store'
 import { useSettingsStore } from '@/store/settings-store'
@@ -39,6 +41,8 @@ const emptyForm = {
 
 export default function PettyCashPage() {
   const { api, reload, pettyCategories, banks, loading } = useCashApiSync()
+  const currentUser = useCurrentUser()
+  const canTopUp = canTopUpPettyCash(currentUser)
   const pettyCash = useDataStore((s) => s.pettyCash)
   const branches = useDataStore((s) => s.branches)
   const addPettyCash = useDataStore((s) => s.addPettyCash)
@@ -47,9 +51,10 @@ export default function PettyCashPage() {
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)
   const settingsCategories = useSettingsStore((s) => s.pettyCashCategories)
 
-  const categoryNames = api
-    ? pettyCategories.map((c) => c.name)
-    : settingsCategories
+  const TOPUP_CATEGORY = 'Imprest top-up'
+  const categoryNames = (
+    api ? pettyCategories.map((c) => c.name) : settingsCategories
+  ).filter((c) => c !== TOPUP_CATEGORY)
   const defaultCategory = categoryNames[0] ?? ''
   const defaultBranchId =
     selectedBranchId === 'all'
@@ -93,7 +98,7 @@ export default function PettyCashPage() {
   const openAdd = () => {
     setIsEdit(false)
     setEditId(null)
-    const type = closingBalance <= 0 ? 'in' : 'out'
+    const type = canTopUp && closingBalance <= 0 ? 'in' : 'out'
     const branchBanksForDefault = banks.filter((b) => b.branchId === defaultBranchId)
     setForm({
       ...emptyForm,
@@ -148,7 +153,7 @@ export default function PettyCashPage() {
       toast.error('Branch is required')
       return
     }
-    if (!form.category.trim()) {
+    if (form.type === 'out' && !form.category.trim()) {
       toast.error('Category is required')
       return
     }
@@ -157,7 +162,17 @@ export default function PettyCashPage() {
       return
     }
     if (form.principal <= 0) {
-      toast.error('Principal must be greater than zero')
+      toast.error(
+        form.type === 'in'
+          ? 'Amount must be greater than zero'
+          : 'Principal must be greater than zero',
+      )
+      return
+    }
+    if (form.type === 'in' && !canTopUp) {
+      toast.error(
+        'Only Tenant Admin or Head Office Branch Manager / Accountant can top up petty cash',
+      )
       return
     }
     if (form.type === 'in' && !form.bankAccountId) {
@@ -173,7 +188,12 @@ export default function PettyCashPage() {
 
     void runSubmit(async () => {
       if (isEdit && editId) {
-        updatePettyCash(editId, form)
+        updatePettyCash(editId, {
+          ...form,
+          ...(form.type === 'in'
+            ? { category: TOPUP_CATEGORY, salesTax: 0, srbSst: 0, gst: 0, incomeTax: 0 }
+            : {}),
+        })
         toast.success('Entry updated')
         setSheetOpen(false)
         return
@@ -181,30 +201,47 @@ export default function PettyCashPage() {
 
       try {
         if (api) {
-          const cat = pettyCategories.find((c) => c.name === form.category)
-          if (!cat) {
-            toast.error('Select a valid category')
-            return
+          if (form.type === 'out') {
+            const cat = pettyCategories.find((c) => c.name === form.category)
+            if (!cat) {
+              toast.error('Select a valid category')
+              return
+            }
+            await apiCreatePettyCash({
+              branchId: form.branchId,
+              entryDate: form.date,
+              categoryId: cat.id,
+              description: form.description,
+              entryType: 'out',
+              principal: form.principal,
+              salesTax: form.salesTax,
+              srbSst: form.srbSst,
+              gst: form.gst,
+              incomeTax: form.incomeTax,
+            })
+          } else {
+            await apiCreatePettyCash({
+              branchId: form.branchId,
+              entryDate: form.date,
+              description: form.description,
+              entryType: 'in',
+              bankAccountId: form.bankAccountId,
+              principal: form.principal,
+            })
           }
-          await apiCreatePettyCash({
-            branchId: form.branchId,
-            entryDate: form.date,
-            categoryId: cat.id,
-            description: form.description,
-            entryType: form.type,
-            ...(form.type === 'in' && form.bankAccountId
-              ? { bankAccountId: form.bankAccountId }
-              : {}),
-            principal: form.principal,
-            salesTax: form.salesTax,
-            srbSst: form.srbSst,
-            gst: form.gst,
-            incomeTax: form.incomeTax,
-          })
           await reload()
         } else {
           addPettyCash({
             ...form,
+            ...(form.type === 'in'
+              ? {
+                  category: TOPUP_CATEGORY,
+                  salesTax: 0,
+                  srbSst: 0,
+                  gst: 0,
+                  incomeTax: 0,
+                }
+              : {}),
             bankAccountId: form.type === 'in' ? form.bankAccountId || null : null,
             bankAccountName:
               form.type === 'in'
@@ -301,7 +338,19 @@ export default function PettyCashPage() {
 
       {api && closingBalance <= 0 && (
         <p className="mb-4 text-sm text-amber-700 dark:text-amber-400">
-          Available balance is {formatCurrency(0)}. Use <strong>Cash In</strong> (imprest top-up) before recording Cash Out.
+          Available balance is {formatCurrency(0)}.
+          {canTopUp ? (
+            <>
+              {' '}
+              Use <strong>Cash In</strong> (imprest top-up) before recording Cash Out.
+            </>
+          ) : (
+            <>
+              {' '}
+              Ask Tenant Admin or Head Office Branch Manager / Accountant to top up
+              before recording Cash Out.
+            </>
+          )}
         </p>
       )}
 
@@ -347,10 +396,14 @@ export default function PettyCashPage() {
                   setForm({
                     ...form,
                     type,
+                    category: type === 'out' ? form.category || defaultCategory : '',
                     bankAccountId:
                       type === 'in'
                         ? form.bankAccountId || nextBanks[0]?.id || ''
                         : '',
+                    ...(type === 'in'
+                      ? { salesTax: 0, srbSst: 0, gst: 0, incomeTax: 0 }
+                      : {}),
                   })
                 }}
               >
@@ -358,10 +411,18 @@ export default function PettyCashPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="in">Cash In (top-up)</SelectItem>
+                  {canTopUp ? (
+                    <SelectItem value="in">Cash In (top-up)</SelectItem>
+                  ) : null}
                   <SelectItem value="out">Cash Out</SelectItem>
                 </SelectContent>
               </Select>
+              {!canTopUp ? (
+                <p className="text-xs text-muted-foreground">
+                  Cash In is limited to Tenant Admin and Head Office Branch Manager /
+                  Accountant. Branch staff post Cash Out only.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>Branch</Label>
@@ -425,77 +486,102 @@ export default function PettyCashPage() {
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select
-                value={form.category || undefined}
-                onValueChange={(v) => setForm({ ...form, category: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryNames.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.type === 'out' ? (
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={form.category || undefined}
+                  onValueChange={(v) => setForm({ ...form, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryNames.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>Description</Label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder={form.type === 'in' ? 'e.g. Float replenishment' : undefined}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            {form.type === 'in' ? (
               <div className="space-y-2">
-                <Label>Principal</Label>
+                <Label>Amount</Label>
                 <Input
                   type="number"
                   min={0}
+                  step="0.01"
                   value={form.principal || ''}
-                  onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      principal: Number(e.target.value),
+                      salesTax: 0,
+                      srbSst: 0,
+                      gst: 0,
+                      incomeTax: 0,
+                    })
+                  }
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Sales Tax</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.salesTax || ''}
-                  onChange={(e) => setForm({ ...form, salesTax: Number(e.target.value) })}
-                />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Principal</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.principal || ''}
+                    onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sales Tax</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.salesTax || ''}
+                    onChange={(e) => setForm({ ...form, salesTax: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>SRB-SST</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.srbSst || ''}
+                    onChange={(e) => setForm({ ...form, srbSst: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>GST</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.gst || ''}
+                    onChange={(e) => setForm({ ...form, gst: Number(e.target.value) })}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>SRB-SST</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.srbSst || ''}
-                  onChange={(e) => setForm({ ...form, srbSst: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>GST</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.gst || ''}
-                  onChange={(e) => setForm({ ...form, gst: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-              Total: <strong>{formatCurrency(computedTotal)}</strong>
-              {form.type === 'out' ? (
+            )}
+            {form.type === 'out' ? (
+              <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+                Total: <strong>{formatCurrency(computedTotal)}</strong>
                 <span className="ml-2 text-muted-foreground">
                   · Available {formatCurrency(closingBalance)}
                 </span>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={submitting}>
                 Cancel

@@ -225,6 +225,17 @@ export function canManageUsers(role: UserRole) {
   return role === 'Super Admin' || role === 'Branch Manager'
 }
 
+/**
+ * Petty cash Cash In (bank top-up): Tenant Admin, or Head Office Branch Manager /
+ * Accountant. Branch staff may only post Cash Out.
+ */
+export function canTopUpPettyCash(
+  subject: BranchAccessSubject | undefined | null,
+): boolean {
+  if (!subject) return false
+  return canViewAllBranches(subject)
+}
+
 export function canEditPermissionMatrix(role: UserRole) {
   return role === 'Super Admin'
 }

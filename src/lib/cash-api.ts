@@ -230,7 +230,8 @@ export function listPettyCash() {
 export function createPettyCash(body: {
   branchId: string
   entryDate: string
-  categoryId: string
+  /** Required for Cash Out. Omitted for Cash In (server assigns Imprest top-up). */
+  categoryId?: string
   description: string
   entryType: 'in' | 'out'
   bankAccountId?: string
