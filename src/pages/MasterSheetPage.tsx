@@ -150,6 +150,10 @@ export default function MasterSheetPage() {
   const permissionMatrix = useAuthStore((s) => s.permissionMatrix)
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const isCounsellor = currentUser?.role === 'Counsellor'
+  const canSeeExpectedCommission =
+    currentUser?.role === 'Super Admin' ||
+    currentUser?.role === 'Branch Manager' ||
+    currentUser?.role === 'Accountant'
   const canListUsers =
     !!currentUser &&
     getPermissionLevel('Settings', currentUser.role, permissionMatrix) !== 'none'
@@ -630,9 +634,8 @@ export default function MasterSheetPage() {
       sortAccessor: (row) => netFee(row.tuitionFee, row.scholarship),
       cell: (row) => formatCurrency(netFee(row.tuitionFee, row.scholarship), row.currency),
     },
-    ...(isCounsellor
-      ? []
-      : [
+    ...(canSeeExpectedCommission
+      ? [
           {
             key: 'commission',
             header: 'Expected Commission',
@@ -642,7 +645,8 @@ export default function MasterSheetPage() {
                 row.currency,
               ),
           },
-        ]),
+        ]
+      : []),
     {
       key: 'actions',
       header: 'Actions',
@@ -1006,15 +1010,22 @@ export default function MasterSheetPage() {
                   onChange={(e) => updateField('scholarship', Number(e.target.value))}
                 />
               </div>
-              {!isCounsellor && (
+              {canSeeExpectedCommission && (
                 <div className="space-y-2">
                   <Label>Expected Commission %</Label>
                   <Input
                     type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
                     value={form.expectedCommissionRate}
-                    readOnly
-                    className="bg-muted/50"
+                    onChange={(e) =>
+                      updateField('expectedCommissionRate', Number(e.target.value))
+                    }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Starts from the university course rate. You can change it.
+                  </p>
                 </div>
               )}
               <div className="space-y-2">

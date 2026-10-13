@@ -36,6 +36,7 @@ import {
 import { invoiceHasPayments, useDataStore } from '@/store/data-store'
 import { isDateLocked, useSettingsStore } from '@/store/settings-store'
 import { fetchInvoiceLogoObjectUrl } from '@/lib/settings-api'
+import { listUniversities, mapApiUniversity, resolveUniversityCourseRate } from '@/lib/masters-api'
 import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
 import {
   createInvoice as apiCreateInvoice,
@@ -46,7 +47,6 @@ import {
   sendInvoice as apiSendInvoice,
   updateInvoice as apiUpdateInvoice,
 } from '@/lib/revenue-api'
-import { listUniversities, mapApiUniversity } from '@/lib/masters-api'
 import type { Currency, Invoice, InvoiceLine, InvoiceStatus, University } from '@/types'
 import { CheckCircle2, Download, Eye, FileText, MoreHorizontal, Pencil, Send, Trash2, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -63,7 +63,6 @@ function applyTpl(
   return out
 }
 
-const COMMISSION_RATES = [10, 12.5, 15, 17.5, 20, 22.5]
 const invoiceStatuses: InvoiceStatus[] = ['Draft', 'Sent', 'Partially Received', 'Fully Received', 'Closed']
 
 const formatDate = (iso: string) => {
@@ -76,11 +75,11 @@ const emptyForm = {
   branchId: 'khi',
   invoiceDate: new Date().toISOString().slice(0, 10),
   poNumber: '',
+  billToAddress: '',
+  billToVatNumber: '',
   currency: 'GBP' as Currency,
   status: 'Draft' as InvoiceStatus,
   lines: [] as InvoiceLine[],
-  universityAddress: '',
-  universityVatNumber: '',
 }
 
 let lineSeq = 0
@@ -96,6 +95,9 @@ export default function InvoicesPage() {
   const invoices = useDataStore((s) => s.invoices)
   const receivables = useDataStore((s) => s.receivables)
   const students = useDataStore((s) => s.students)
+  const storeUniversities = useDataStore((s) => s.universities)
+  const [apiUniversities, setApiUniversities] = useState<University[]>([])
+  const universities = api ? apiUniversities : storeUniversities
   const addInvoice = useDataStore((s) => s.addInvoice)
   const updateInvoice = useDataStore((s) => s.updateInvoice)
   const deleteInvoice = useDataStore((s) => s.deleteInvoice)
@@ -104,6 +106,21 @@ export default function InvoicesPage() {
   const getStudent = (id: string) => students.find((s) => s.id === id)
   const brandName = orgName.trim() || "D' Educationist"
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!api) return
+    let cancelled = false
+    void listUniversities()
+      .then((rows) => {
+        if (!cancelled) setApiUniversities(rows.map(mapApiUniversity))
+      })
+      .catch(() => {
+        if (!cancelled) setApiUniversities([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [api])
 
   useEffect(() => {
     if (!api || !branding.hasLogo) {
@@ -144,9 +161,6 @@ export default function InvoicesPage() {
   const [emailForm, setEmailForm] = useState({ to: '', cc: '', subject: '', body: '' })
   const [studentSearch, setStudentSearch] = useState('')
   const [universityFilter, setUniversityFilter] = useState('all')
-  const [universities, setUniversities] = useState<University[]>([])
-  /** Tracks which university Bill To fields were last loaded from, so user edits stick. */
-  const [billToUniKey, setBillToUniKey] = useState<string | null>(null)
   const { submitting: saving, runSubmit: runSave } = useSubmitState()
   const { submitting: sending, runSubmit: runSend } = useSubmitState()
   const { submitting: markingSent, runSubmit: runMarkSent } = useSubmitState()
@@ -182,51 +196,6 @@ export default function InvoicesPage() {
     return getStudent(form.lines[0].studentId)?.university ?? null
   }, [form.lines, students])
 
-  const billToUniversityId = useMemo(() => {
-    return (
-      form.lines
-        .map((l) => getStudent(l.studentId)?.universityId)
-        .find((id): id is string => Boolean(id)) ?? undefined
-    )
-  }, [form.lines, students])
-
-  const billToUniversity = useMemo(() => {
-    if (!billToUniversityId) return undefined
-    return universities.find((u) => u.id === billToUniversityId)
-  }, [billToUniversityId, universities])
-
-  useEffect(() => {
-    if (!api || !dialogOpen) return
-    let cancelled = false
-    void listUniversities()
-      .then((rows) => {
-        if (!cancelled) setUniversities(rows.map(mapApiUniversity))
-      })
-      .catch(() => {
-        if (!cancelled) setUniversities([])
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [api, dialogOpen])
-
-  useEffect(() => {
-    if (!billToUniversity) {
-      if (billToUniKey) {
-        setBillToUniKey(null)
-        setForm((p) => ({ ...p, universityAddress: '', universityVatNumber: '' }))
-      }
-      return
-    }
-    if (billToUniversity.id === billToUniKey) return
-    setBillToUniKey(billToUniversity.id)
-    setForm((p) => ({
-      ...p,
-      universityAddress: billToUniversity.address ?? '',
-      universityVatNumber: billToUniversity.vatNumber ?? '',
-    }))
-  }, [billToUniversity, billToUniKey])
-
   const universityOptions = useMemo(() => {
     const names = [...new Set(branchStudents.map((s) => s.university).filter(Boolean))].sort()
     return names.map((name) => ({ label: name, value: name }))
@@ -250,7 +219,6 @@ export default function InvoicesPage() {
     setIsEdit(false)
     setEditId(null)
     setForm(emptyForm)
-    setBillToUniKey(null)
     setStudentSearch('')
     setUniversityFilter('all')
     setDialogOpen(true)
@@ -259,17 +227,24 @@ export default function InvoicesPage() {
   const openEdit = (invoice: Invoice) => {
     setIsEdit(true)
     setEditId(invoice.id)
+    const firstStudent = invoice.lines[0]
+      ? students.find((s) => s.id === invoice.lines[0].studentId)
+      : undefined
+    const uni = universities.find(
+      (u) =>
+        (firstStudent?.universityId && u.id === firstStudent.universityId) ||
+        u.name === firstStudent?.university,
+    )
     setForm({
       branchId: invoice.branchId,
       invoiceDate: invoice.invoiceDate,
       poNumber: invoice.poNumber ?? '',
+      billToAddress: invoice.billToAddress ?? uni?.address ?? '',
+      billToVatNumber: invoice.billToVatNumber ?? uni?.vatNumber ?? '',
       currency: invoice.currency,
       status: invoice.status,
       lines: invoice.lines.map((l) => ({ ...l })),
-      universityAddress: invoice.universityAddress ?? '',
-      universityVatNumber: invoice.universityVatNumber ?? '',
     })
-    setBillToUniKey(invoice.universityId ?? null)
     setStudentSearch('')
     const firstUni = invoice.lines[0]
       ? students.find((s) => s.id === invoice.lines[0].studentId)?.university
@@ -328,19 +303,6 @@ export default function InvoicesPage() {
     }
     setIsResend(true)
     prefillEmail(invoice)
-  }
-
-  const handleDownloadPdf = async (invoice: Invoice) => {
-    if (!api) {
-      toast.error('PDF download requires API mode')
-      return
-    }
-    try {
-      await apiDownloadInvoicePdf(invoice.id, invoice.invoiceNo)
-      toast.success(`Downloaded ${invoice.invoiceNo}.pdf`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'PDF download failed')
-    }
   }
 
   /** Draft → Sent (+ GL) without requiring SMTP / recipient. */
@@ -483,12 +445,17 @@ export default function InvoicesPage() {
       return
     }
 
+    const uniForRate = universities.find(
+      (u) =>
+        (student.universityId && u.id === student.universityId) ||
+        u.name === student.university,
+    )
     const line: InvoiceLine = {
       id: nextLineId(),
       studentId,
       tuitionFee: student.tuitionFee,
       scholarship: student.scholarship,
-      commissionRate: student.expectedCommissionRate,
+      commissionRate: resolveUniversityCourseRate(uniForRate, student.courseId),
       bonus: 0,
     }
 
@@ -496,6 +463,12 @@ export default function InvoicesPage() {
       ...prev,
       branchId: prev.lines.length === 0 ? student.branchId : prev.branchId,
       currency: prev.lines.length === 0 ? student.currency : prev.currency,
+      ...(prev.lines.length === 0
+        ? {
+            billToAddress: uniForRate?.address ?? prev.billToAddress,
+            billToVatNumber: uniForRate?.vatNumber ?? prev.billToVatNumber,
+          }
+        : {}),
       lines: [...prev.lines, line],
     }))
     if (form.lines.length === 0) {
@@ -547,6 +520,8 @@ export default function InvoicesPage() {
       branchId: form.branchId,
       invoiceDate: form.invoiceDate,
       poNumber: form.poNumber || undefined,
+      billToAddress: form.billToAddress.trim() || undefined,
+      billToVatNumber: form.billToVatNumber.trim() || undefined,
       currency: form.currency,
       status: form.status,
       lines: form.lines,
@@ -567,10 +542,10 @@ export default function InvoicesPage() {
             universityId: uniId,
             invoiceDate: form.invoiceDate,
             poNumber: form.poNumber || undefined,
+            billToAddress: form.billToAddress.trim() || null,
+            billToVatNumber: form.billToVatNumber.trim() || null,
             currencyCode: form.currency,
             status: invoiceStatusToApi(isEdit ? form.status : 'Draft'),
-            universityAddress: form.universityAddress.trim() || null,
-            universityVatNumber: form.universityVatNumber.trim() || null,
             lines: invoiceFormToApiLines(form.lines),
           }
           if (isEdit && editId) {
@@ -707,16 +682,16 @@ export default function InvoicesPage() {
             <DropdownMenuItem onClick={() => setPreviewInvoice(row)}>
               <Eye /> Preview
             </DropdownMenuItem>
-            {api && (
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault()
-                  void handleDownloadPdf(row)
-                }}
-              >
-                <Download /> Download PDF
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              disabled={!api}
+              onClick={() => {
+                void apiDownloadInvoicePdf(row.id, row.invoiceNo).catch((err) =>
+                  toast.error(err instanceof Error ? err.message : 'PDF download failed'),
+                )
+              }}
+            >
+              <Download /> Download PDF
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setPaymentInvoiceId(row.id)}>
               <Wallet /> Payment history
             </DropdownMenuItem>
@@ -830,6 +805,29 @@ export default function InvoicesPage() {
               )}
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Bill To address</Label>
+                <Textarea
+                  rows={3}
+                  value={form.billToAddress}
+                  onChange={(e) => setForm((p) => ({ ...p, billToAddress: e.target.value }))}
+                  placeholder="University head office address"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Prefilled from the university when you add the first student. Printed on the invoice PDF.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>VAT number</Label>
+                <Input
+                  value={form.billToVatNumber}
+                  onChange={(e) => setForm((p) => ({ ...p, billToVatNumber: e.target.value }))}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Students (select one or more from the same university)</Label>
               {lockedUniversity && (
@@ -895,43 +893,6 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            {(lockedUniversity || billToUniversity) && (
-              <div className="space-y-3 rounded-lg border p-3">
-                <div>
-                  <Label>Bill To (university)</Label>
-                  <p className="text-sm font-medium">
-                    {billToUniversity?.name ?? lockedUniversity}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Address and VAT appear on the invoice PDF. Saving updates the university master.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="uni-address">University address</Label>
-                  <Textarea
-                    id="uni-address"
-                    rows={3}
-                    value={form.universityAddress}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, universityAddress: e.target.value }))
-                    }
-                    placeholder="Head office / billing address"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="uni-vat">VAT number</Label>
-                  <Input
-                    id="uni-vat"
-                    value={form.universityVatNumber}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, universityVatNumber: e.target.value }))
-                    }
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-            )}
-
             {form.lines.length > 0 && (
               <div className="space-y-3">
                 <Label>Line items ({form.lines.length})</Label>
@@ -974,18 +935,15 @@ export default function InvoicesPage() {
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Commission %</Label>
-                            <Select
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
                               disabled={editingHasPayments}
-                              value={String(line.commissionRate)}
-                              onValueChange={(v) => updateLine(line.id, { commissionRate: Number(v) })}
-                            >
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {COMMISSION_RATES.map((rate) => (
-                                  <SelectItem key={rate} value={String(rate)}>{rate}%</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              value={line.commissionRate}
+                              onChange={(e) => updateLine(line.id, { commissionRate: Number(e.target.value) })}
+                            />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">Bonus</Label>
@@ -1125,11 +1083,16 @@ export default function InvoicesPage() {
                     </Button>
                   </>
                 )}
-                {api && (
-                  <Button onClick={() => void handleDownloadPdf(previewInvoice)}>
-                    <Download className="mr-1.5 h-4 w-4" /> Download PDF
-                  </Button>
-                )}
+                <Button
+                  disabled={!api}
+                  onClick={() => {
+                    void apiDownloadInvoicePdf(previewInvoice.id, previewInvoice.invoiceNo).catch((err) =>
+                      toast.error(err instanceof Error ? err.message : 'PDF download failed'),
+                    )
+                  }}
+                >
+                  <Download className="mr-1.5 h-4 w-4" /> Download PDF
+                </Button>
               </div>
             </div>
           )}

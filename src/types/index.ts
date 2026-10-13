@@ -128,13 +128,12 @@ export interface Invoice {
   invoiceNo: string
   branchId: string
   branchName?: string
-  universityId?: string
-  /** Bill To snapshot from university master (when API includes it). */
-  universityAddress?: string
-  universityVatNumber?: string
-  universityName?: string
   invoiceDate: string
   poNumber?: string
+  /** Bill To address snapshot edited on the invoice. */
+  billToAddress?: string
+  /** Bill To VAT number snapshot edited on the invoice. */
+  billToVatNumber?: string
   currency: Currency
   status: InvoiceStatus
   /** One or more student commission lines on this invoice. */

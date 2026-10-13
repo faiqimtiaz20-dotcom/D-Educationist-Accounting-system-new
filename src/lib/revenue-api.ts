@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api-client'
+import { apiFetch, getApiBaseUrl, loadTokens } from '@/lib/api-client'
 import type {
   Currency,
   Invoice,
@@ -33,6 +33,8 @@ export type ApiInvoice = {
   invoiceNo: string
   branchId: string
   universityId: string | null
+  billToAddress: string | null
+  billToVatNumber: string | null
   invoiceDate: string
   poNumber: string | null
   currencyCode: string
@@ -40,13 +42,6 @@ export type ApiInvoice = {
   exchangeRate: string | number | null
   notes: string | null
   branch?: { id: string; code: string; name: string } | null
-  university?: {
-    id: string
-    name: string
-    countryName?: string
-    address?: string | null
-    vatNumber?: string | null
-  } | null
   lines: Array<{
     id: string
     studentId: string
@@ -112,12 +107,10 @@ export function mapApiInvoice(inv: ApiInvoice): Invoice {
     invoiceNo: inv.invoiceNo,
     branchId: inv.branchId,
     branchName: inv.branch?.name,
-    universityId: inv.universityId ?? inv.university?.id ?? undefined,
-    universityName: inv.university?.name ?? undefined,
-    universityAddress: inv.university?.address ?? undefined,
-    universityVatNumber: inv.university?.vatNumber ?? undefined,
     invoiceDate: toDateOnly(inv.invoiceDate),
     poNumber: inv.poNumber ?? undefined,
+    billToAddress: inv.billToAddress ?? undefined,
+    billToVatNumber: inv.billToVatNumber ?? undefined,
     currency: inv.currencyCode as Currency,
     status: STATUS_FROM_API[inv.status] ?? 'Draft',
     lines: inv.lines.map((l) => ({
@@ -193,14 +186,14 @@ export function listInvoices() {
 export function createInvoice(body: {
   branchId: string
   universityId?: string
+  billToAddress?: string | null
+  billToVatNumber?: string | null
   invoiceDate: string
   poNumber?: string
   currencyCode: string
   status?: string
   exchangeRate?: number
   notes?: string
-  universityAddress?: string | null
-  universityVatNumber?: string | null
   lines: Array<{
     studentId: string
     tuitionFee: number
@@ -219,14 +212,14 @@ export function updateInvoice(
   id: string,
   body: {
     universityId?: string | null
+    billToAddress?: string | null
+    billToVatNumber?: string | null
     invoiceDate?: string
     poNumber?: string | null
     currencyCode?: string
     status?: string
     exchangeRate?: number | null
     notes?: string | null
-    universityAddress?: string | null
-    universityVatNumber?: string | null
     lines?: Array<{
       studentId: string
       tuitionFee: number
@@ -258,9 +251,8 @@ export function sendInvoice(
   })
 }
 
-/** Download commission invoice PDF (same layout as email attachment). */
+/** Download the same PDF that is attached to invoice emails. */
 export async function downloadInvoicePdf(id: string, invoiceNo?: string) {
-  const { getApiBaseUrl, loadTokens, ApiError } = await import('@/lib/api-client')
   const tokens = loadTokens()
   const res = await fetch(`${getApiBaseUrl()}/invoices/${id}/pdf`, {
     headers: tokens?.accessToken
@@ -274,15 +266,15 @@ export async function downloadInvoicePdf(id: string, invoiceNo?: string) {
       if (Array.isArray(body.message)) message = body.message.join(', ')
       else if (body.message) message = body.message
     } catch {
-      /* ignore */
+      /* non-JSON error body */
     }
-    throw new ApiError(res.status, message)
+    throw new Error(message)
   }
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = invoiceNo ? `invoice-${invoiceNo}.pdf` : `invoice-${id}.pdf`
+  a.download = `invoice-${(invoiceNo || id).replace(/[^\w.-]+/g, '_')}.pdf`
   a.click()
   URL.revokeObjectURL(url)
 }
