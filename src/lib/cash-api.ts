@@ -18,6 +18,7 @@ export type ApiPettyCash = {
   categoryId: string
   description: string
   entryType: 'in' | 'out'
+  bankAccountId?: string | null
   principal: string | number
   salesTax: string | number
   srbSst: string | number
@@ -25,6 +26,7 @@ export type ApiPettyCash = {
   incomeTax: string | number
   total: string | number
   category?: { id: string; name: string }
+  bankAccount?: { id: string; name: string; bankName?: string; accountNo?: string } | null
 }
 
 export type ApiExpense = {
@@ -123,6 +125,8 @@ export function mapApiPettyCash(e: ApiPettyCash): PettyCashEntry {
     category: e.category?.name ?? e.categoryId,
     description: e.description,
     type: e.entryType,
+    bankAccountId: e.bankAccountId ?? e.bankAccount?.id ?? null,
+    bankAccountName: e.bankAccount?.name ?? null,
     principal: Number(e.principal),
     salesTax: Number(e.salesTax),
     srbSst: Number(e.srbSst),
@@ -229,6 +233,7 @@ export function createPettyCash(body: {
   categoryId: string
   description: string
   entryType: 'in' | 'out'
+  bankAccountId?: string
   principal: number
   salesTax?: number
   srbSst?: number

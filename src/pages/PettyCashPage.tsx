@@ -29,6 +29,7 @@ const emptyForm = {
   category: '',
   description: '',
   type: 'out' as 'in' | 'out',
+  bankAccountId: '',
   principal: 0,
   salesTax: 0,
   srbSst: 0,
@@ -37,7 +38,7 @@ const emptyForm = {
 }
 
 export default function PettyCashPage() {
-  const { api, reload, pettyCategories, loading } = useCashApiSync()
+  const { api, reload, pettyCategories, banks, loading } = useCashApiSync()
   const pettyCash = useDataStore((s) => s.pettyCash)
   const branches = useDataStore((s) => s.branches)
   const addPettyCash = useDataStore((s) => s.addPettyCash)
@@ -84,15 +85,23 @@ export default function PettyCashPage() {
     [filtered]
   )
 
+  const branchBanks = useMemo(
+    () => banks.filter((b) => !form.branchId || b.branchId === form.branchId),
+    [banks, form.branchId],
+  )
+
   const openAdd = () => {
     setIsEdit(false)
     setEditId(null)
+    const type = closingBalance <= 0 ? 'in' : 'out'
+    const branchBanksForDefault = banks.filter((b) => b.branchId === defaultBranchId)
     setForm({
       ...emptyForm,
       branchId: defaultBranchId,
       date: today,
       category: defaultCategory,
-      type: closingBalance <= 0 ? 'in' : 'out',
+      type,
+      bankAccountId: type === 'in' ? (branchBanksForDefault[0]?.id ?? '') : '',
     })
     setSheetOpen(true)
   }
@@ -110,6 +119,7 @@ export default function PettyCashPage() {
       category: entry.category,
       description: entry.description,
       type: entry.type,
+      bankAccountId: entry.bankAccountId ?? '',
       principal: entry.principal,
       salesTax: entry.salesTax,
       srbSst: entry.srbSst,
@@ -150,6 +160,10 @@ export default function PettyCashPage() {
       toast.error('Principal must be greater than zero')
       return
     }
+    if (form.type === 'in' && !form.bankAccountId) {
+      toast.error('Select the bank account funding this Cash In')
+      return
+    }
     if (form.type === 'out' && computedTotal > closingBalance + 1e-9) {
       toast.error(
         `Cash out ${formatCurrency(computedTotal)} exceeds available balance ${formatCurrency(closingBalance)}. Add a Cash In first.`,
@@ -178,6 +192,9 @@ export default function PettyCashPage() {
             categoryId: cat.id,
             description: form.description,
             entryType: form.type,
+            ...(form.type === 'in' && form.bankAccountId
+              ? { bankAccountId: form.bankAccountId }
+              : {}),
             principal: form.principal,
             salesTax: form.salesTax,
             srbSst: form.srbSst,
@@ -186,7 +203,14 @@ export default function PettyCashPage() {
           })
           await reload()
         } else {
-          addPettyCash(form)
+          addPettyCash({
+            ...form,
+            bankAccountId: form.type === 'in' ? form.bankAccountId || null : null,
+            bankAccountName:
+              form.type === 'in'
+                ? (banks.find((b) => b.id === form.bankAccountId)?.name ?? null)
+                : null,
+          })
         }
         toast.success('Entry added')
         setSheetOpen(false)
@@ -213,6 +237,12 @@ export default function PettyCashPage() {
           {r.type === 'in' ? 'Cash In' : 'Cash Out'}
         </span>
       ),
+    },
+    {
+      key: 'bank',
+      header: 'From bank',
+      cell: (r) =>
+        r.type === 'in' ? (r.bankAccountName || '—') : '—',
     },
     {
       key: 'total',
@@ -311,7 +341,18 @@ export default function PettyCashPage() {
               <Label>Type</Label>
               <Select
                 value={form.type}
-                onValueChange={(v) => setForm({ ...form, type: v as 'in' | 'out' })}
+                onValueChange={(v) => {
+                  const type = v as 'in' | 'out'
+                  const nextBanks = banks.filter((b) => b.branchId === form.branchId)
+                  setForm({
+                    ...form,
+                    type,
+                    bankAccountId:
+                      type === 'in'
+                        ? form.bankAccountId || nextBanks[0]?.id || ''
+                        : '',
+                  })
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -326,7 +367,15 @@ export default function PettyCashPage() {
               <Label>Branch</Label>
               <Select
                 value={form.branchId || undefined}
-                onValueChange={(v) => setForm({ ...form, branchId: v })}
+                onValueChange={(v) => {
+                  const nextBanks = banks.filter((b) => b.branchId === v)
+                  setForm({
+                    ...form,
+                    branchId: v,
+                    bankAccountId:
+                      form.type === 'in' ? (nextBanks[0]?.id ?? '') : '',
+                  })
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select branch" />
@@ -340,6 +389,34 @@ export default function PettyCashPage() {
                 </SelectContent>
               </Select>
             </div>
+            {form.type === 'in' ? (
+              <div className="space-y-2">
+                <Label>From bank account</Label>
+                <Select
+                  value={form.bankAccountId || undefined}
+                  onValueChange={(v) => setForm({ ...form, bankAccountId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branchBanks.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} · {formatCurrency(b.balance, b.currency)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  GL: Dr Cash in Hand / Cr Bank. This bank&apos;s balance will decrease by the top-up amount.
+                </p>
+                {branchBanks.length === 0 ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    No bank accounts on this branch. Add one under Bank &amp; Cash first.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>Date</Label>
               <Input

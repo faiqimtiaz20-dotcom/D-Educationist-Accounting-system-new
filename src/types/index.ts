@@ -247,6 +247,9 @@ export interface PettyCashEntry {
   category: string
   description: string
   type: 'in' | 'out'
+  /** Set on Cash In — bank that funded the top-up. */
+  bankAccountId?: string | null
+  bankAccountName?: string | null
   principal: number
   salesTax: number
   srbSst: number
