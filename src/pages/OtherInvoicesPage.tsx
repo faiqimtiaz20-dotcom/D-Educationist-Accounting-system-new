@@ -250,21 +250,29 @@ export default function OtherInvoicesPage() {
     void runSubmit(async () => {
       try {
         if (api) {
-          const body = {
-            branchId: form.branchId,
-            invoiceDate: form.invoiceDate,
-            billTo: form.billTo.trim(),
-            category: form.category.trim(),
-            currencyCode: form.currency,
-            status: form.status,
-            notes: form.notes.trim() || undefined,
-            lines: form.lines,
-          }
           if (isEdit && editId) {
-            await apiUpdateOther(editId, body)
+            // UpdateOtherInvoiceDto forbids branchId — branch is fixed after create.
+            await apiUpdateOther(editId, {
+              invoiceDate: form.invoiceDate,
+              billTo: form.billTo.trim(),
+              category: form.category.trim(),
+              currencyCode: form.currency,
+              status: form.status,
+              notes: form.notes.trim() || undefined,
+              lines: form.lines,
+            })
             toast.success('Invoice updated')
           } else {
-            await apiCreateOther({ ...body, status: 'Draft' })
+            await apiCreateOther({
+              branchId: form.branchId,
+              invoiceDate: form.invoiceDate,
+              billTo: form.billTo.trim(),
+              category: form.category.trim(),
+              currencyCode: form.currency,
+              status: 'Draft',
+              notes: form.notes.trim() || undefined,
+              lines: form.lines,
+            })
             toast.success('Invoice created as Draft')
           }
           await reload()

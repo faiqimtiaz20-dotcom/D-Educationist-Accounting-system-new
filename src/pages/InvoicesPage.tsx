@@ -537,22 +537,32 @@ export default function InvoicesPage() {
             toast.error('Selected students must have a registered university')
             return
           }
-          const body = {
-            branchId: form.branchId,
-            universityId: uniId,
-            invoiceDate: form.invoiceDate,
-            poNumber: form.poNumber || undefined,
-            billToAddress: form.billToAddress.trim() || null,
-            billToVatNumber: form.billToVatNumber.trim() || null,
-            currencyCode: form.currency,
-            status: invoiceStatusToApi(isEdit ? form.status : 'Draft'),
-            lines: invoiceFormToApiLines(form.lines),
-          }
+          const lines = invoiceFormToApiLines(form.lines)
           if (isEdit && editId) {
-            await apiUpdateInvoice(editId, body)
+            // UpdateInvoiceDto forbids branchId — branch is fixed after create.
+            await apiUpdateInvoice(editId, {
+              universityId: uniId,
+              invoiceDate: form.invoiceDate,
+              poNumber: form.poNumber || undefined,
+              billToAddress: form.billToAddress.trim() || null,
+              billToVatNumber: form.billToVatNumber.trim() || null,
+              currencyCode: form.currency,
+              status: invoiceStatusToApi(form.status),
+              lines,
+            })
             toast.success('Invoice updated')
           } else {
-            await apiCreateInvoice({ ...body, status: 'Draft' })
+            await apiCreateInvoice({
+              branchId: form.branchId,
+              universityId: uniId,
+              invoiceDate: form.invoiceDate,
+              poNumber: form.poNumber || undefined,
+              billToAddress: form.billToAddress.trim() || null,
+              billToVatNumber: form.billToVatNumber.trim() || null,
+              currencyCode: form.currency,
+              status: 'Draft',
+              lines,
+            })
             toast.success('Invoice created as Draft')
           }
           await reload()
@@ -796,11 +806,25 @@ export default function InvoicesPage() {
                   <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as InvoiceStatus }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {invoiceStatuses.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
+                      {invoiceStatuses.map((s) => {
+                        // Payment/closed statuses are system-driven (remittances / close flow).
+                        // Draft cannot be re-selected once left (backend rejects revert).
+                        const paymentOrClosed =
+                          s === 'Partially Received' ||
+                          s === 'Fully Received' ||
+                          s === 'Closed'
+                        const revertToDraft = s === 'Draft' && form.status !== 'Draft'
+                        return (
+                          <SelectItem key={s} value={s} disabled={paymentOrClosed || revertToDraft}>
+                            {s}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Only Draft → Sent here. Partial/full received follow payments; Closed is separate.
+                  </p>
                 </div>
               )}
             </div>
