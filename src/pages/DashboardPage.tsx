@@ -131,13 +131,15 @@ export default function DashboardPage() {
     [invoices, receivables],
   )
 
-  const dashboardMetrics = api && apiMetrics ? apiMetrics : localMetrics
-  const commissionData = api && apiMetrics ? commissionByUniversity : localCommission
-  const ageingData = api && apiMetrics
+  // In API mode never fall back to local/mock charts — that leaked demo
+  // Oxford/Leeds/Manchester data into empty tenants.
+  const dashboardMetrics = api ? (apiMetrics ?? localMetrics) : localMetrics
+  const commissionData = api ? commissionByUniversity : localCommission
+  const ageingData = api
     ? receivablesAgeing.map((r) => ({ name: r.name, value: r.pct ?? r.value }))
     : localAgeing
-  const profitData = api && apiMetrics ? branchProfit : mockBranchProfit
-  const trendData = api && apiMetrics ? monthlyTrend : mockTrend
+  const profitData = api ? branchProfit : mockBranchProfit
+  const trendData = api ? monthlyTrend : mockTrend
 
   const profitMargin = api && apiMetrics
     ? apiMetrics.profitMargin.toFixed(1)
