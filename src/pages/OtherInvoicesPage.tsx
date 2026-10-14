@@ -32,14 +32,18 @@ import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
 import {
   createOtherInvoice as apiCreateOther,
   deleteOtherInvoice as apiDeleteOther,
+  mapApiOtherInvoice,
+  recordOtherInvoicePayment as apiRecordPayment,
   updateOtherInvoice as apiUpdateOther,
 } from '@/lib/revenue-api'
 import type { Currency, OtherInvoice, OtherInvoiceLine, OtherInvoiceStatus } from '@/types'
-import { Eye, FileText, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { Banknote, Eye, FileText, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 const otherInvoiceStatuses: OtherInvoiceStatus[] = ['Draft', 'Sent', 'Paid', 'Closed']
+/** Manual edit statuses — Paid only via Record payment (bank + GL). */
+const editableStatuses: OtherInvoiceStatus[] = ['Draft', 'Sent', 'Closed']
 const currencies: Currency[] = ['PKR', 'GBP', 'USD', 'CAD', 'AUD', 'EUR']
 
 const formatDate = (iso: string) => {
@@ -73,7 +77,7 @@ export default function OtherInvoicesPage() {
   const currentUser = useCurrentUser()
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
-  const { api, reload, loading } = useRevenueApiSync()
+  const { api, reload, banks, loading } = useRevenueApiSync()
   const selectedBranchId = useAppStore((s) => s.selectedBranchId)
   const otherInvoices = useDataStore((s) => s.otherInvoices)
   const addOtherInvoice = useDataStore((s) => s.addOtherInvoice)
@@ -88,8 +92,65 @@ export default function OtherInvoicesPage() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [previewInvoice, setPreviewInvoice] = useState<OtherInvoice | null>(null)
+  const [payInvoice, setPayInvoice] = useState<OtherInvoice | null>(null)
+  const [payForm, setPayForm] = useState({
+    bankAccountId: '',
+    amountReceived: 0,
+    exchangeRate: 1,
+    receiptDate: new Date().toISOString().slice(0, 10),
+    notes: '',
+  })
   const [form, setForm] = useState(() => emptyForm(defaultBranch))
   const { submitting, runSubmit } = useSubmitState()
+
+  const openPay = (invoice: OtherInvoice) => {
+    const total = getOtherInvoiceTotal(invoice)
+    setPayInvoice(invoice)
+    setPayForm({
+      bankAccountId: banks[0]?.id ?? '',
+      amountReceived: total,
+      exchangeRate: invoice.currency === 'PKR' ? 1 : 280,
+      receiptDate: new Date().toISOString().slice(0, 10),
+      notes: '',
+    })
+  }
+
+  const handleRecordPayment = () => {
+    if (!payInvoice) return
+    if (!payForm.bankAccountId) {
+      toast.error('Select a bank account')
+      return
+    }
+    if (!(payForm.amountReceived > 0)) {
+      toast.error('Enter a payment amount')
+      return
+    }
+    if (isDateLocked(payForm.receiptDate)) {
+      toast.error('Receipt date is in a locked fiscal period')
+      return
+    }
+    void runSubmit(async () => {
+      try {
+        if (api) {
+          const updated = await apiRecordPayment(payInvoice.id, {
+            bankAccountId: payForm.bankAccountId,
+            amountReceived: payForm.amountReceived,
+            exchangeRate: payForm.exchangeRate,
+            receiptDate: payForm.receiptDate,
+            notes: payForm.notes || undefined,
+          })
+          updateOtherInvoice(payInvoice.id, mapApiOtherInvoice(updated))
+          await reload()
+        } else {
+          updateOtherInvoice(payInvoice.id, { status: 'Paid' })
+        }
+        toast.success(`Payment recorded for ${payInvoice.invoiceNo} (bank + GL)`)
+        setPayInvoice(null)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Payment failed')
+      }
+    })
+  }
 
   const filtered = useMemo(() => {
     if (activeStatus === 'all') return branchInvoices
@@ -346,6 +407,18 @@ export default function OtherInvoicesPage() {
                 <Send /> Mark as Sent
               </DropdownMenuItem>
             )}
+            {canWrite && row.status === 'Sent' && (
+              <DropdownMenuItem
+                className="text-primary"
+                disabled={submitting}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  openPay(row)
+                }}
+              >
+                <Banknote /> Record payment
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setPreviewInvoice(row)}>
               <Eye /> Preview
             </DropdownMenuItem>
@@ -478,7 +551,7 @@ export default function OtherInvoicesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {otherInvoiceStatuses.map((s) => (
+                      {editableStatuses.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
                         </SelectItem>
@@ -667,6 +740,113 @@ export default function OtherInvoicesPage() {
                     <Send className="mr-1.5 h-4 w-4" /> Mark as Sent
                   </Button>
                 )}
+                {canWrite && previewInvoice.status === 'Sent' && (
+                  <Button
+                    loading={submitting}
+                    onClick={() => {
+                      openPay(previewInvoice)
+                      setPreviewInvoice(null)
+                    }}
+                  >
+                    <Banknote className="mr-1.5 h-4 w-4" /> Record payment
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!payInvoice} onOpenChange={(open) => !open && setPayInvoice(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record payment — {payInvoice?.invoiceNo}</DialogTitle>
+          </DialogHeader>
+          {payInvoice && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Posts bank deposit and GL (Dr Bank / Cr AR). Outstanding:{' '}
+                <span className="font-medium text-foreground">
+                  {formatCurrency(getOtherInvoiceTotal(payInvoice), payInvoice.currency)}
+                </span>
+              </p>
+              <div className="space-y-2">
+                <Label>Bank account</Label>
+                <Select
+                  value={payForm.bankAccountId}
+                  onValueChange={(v) => setPayForm((p) => ({ ...p, bankAccountId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {banks.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} ({b.bankName})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Amount ({payInvoice.currency})</Label>
+                  <Input
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    value={payForm.amountReceived || ''}
+                    onChange={(e) =>
+                      setPayForm((p) => ({ ...p, amountReceived: Number(e.target.value) }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Receipt date</Label>
+                  <Input
+                    type="date"
+                    value={payForm.receiptDate}
+                    onChange={(e) => setPayForm((p) => ({ ...p, receiptDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+              {payInvoice.currency !== 'PKR' && (
+                <div className="space-y-2">
+                  <Label>Exchange rate → PKR</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.0001"
+                    value={payForm.exchangeRate || ''}
+                    onChange={(e) =>
+                      setPayForm((p) => ({ ...p, exchangeRate: Number(e.target.value) }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Bank credit:{' '}
+                    {formatCurrency(
+                      Math.round(payForm.amountReceived * payForm.exchangeRate * 100) / 100,
+                      'PKR',
+                    )}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  rows={2}
+                  value={payForm.notes}
+                  onChange={(e) => setPayForm((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setPayInvoice(null)} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button onClick={handleRecordPayment} loading={submitting}>
+                  Post payment
+                </Button>
               </div>
             </div>
           )}

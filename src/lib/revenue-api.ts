@@ -353,6 +353,22 @@ export function deleteOtherInvoice(id: string) {
   return apiFetch<{ success: boolean }>(`/other-invoices/${id}`, { method: 'DELETE' })
 }
 
+export function recordOtherInvoicePayment(
+  id: string,
+  body: {
+    bankAccountId: string
+    amountReceived: number
+    exchangeRate: number
+    receiptDate: string
+    notes?: string
+  },
+) {
+  return apiFetch<ApiOtherInvoice>(`/other-invoices/${id}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
 export function listReceivables() {
   return apiFetch<ApiReceivable[]>('/receivables')
 }

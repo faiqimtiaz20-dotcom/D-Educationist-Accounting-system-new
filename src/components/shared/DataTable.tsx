@@ -76,6 +76,8 @@ interface DataTableProps<T> {
    * Set `false` for chronological ledgers / running balances.
    */
   newestFirst?: boolean
+  /** Hide built-in pager (use when the page owns server-side pagination). */
+  hidePagination?: boolean
 }
 
 function isFilterActive(value: string | RangeValue | undefined): boolean {
@@ -95,6 +97,7 @@ export function DataTable<T>({
   onStatusChange,
   filters,
   newestFirst,
+  hidePagination = false,
 }: DataTableProps<T>) {
   // API lists are already newest-first; reversing them showed oldest first (bug).
   // Mock store appends at the end, so reverse only in mock mode unless overridden.
@@ -181,7 +184,9 @@ export function DataTable<T>({
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const currentPage = Math.min(page, totalPages - 1)
-  const paged = sorted.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+  const paged = hidePagination
+    ? sorted
+    : sorted.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
 
   const setFilterValue = (key: string, value: string | RangeValue) => {
     setFilterState((prev) => ({ ...prev, [key]: value }))
@@ -351,19 +356,21 @@ export function DataTable<T>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-center sm:text-left">Page {currentPage + 1} of {totalPages} ({filtered.length} records)</span>
-        <div className="flex justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only sm:not-sr-only sm:inline">Previous</span>
-          </Button>
-          <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setPage(currentPage + 1)}>
-            <span className="sr-only sm:not-sr-only sm:inline">Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+      {!hidePagination ? (
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-center sm:text-left">Page {currentPage + 1} of {totalPages} ({filtered.length} records)</span>
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+              <span className="sr-only sm:not-sr-only sm:inline">Previous</span>
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage >= totalPages - 1} onClick={() => setPage(currentPage + 1)}>
+              <span className="sr-only sm:not-sr-only sm:inline">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

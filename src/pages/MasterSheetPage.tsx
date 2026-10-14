@@ -691,6 +691,7 @@ export default function MasterSheetPage() {
         data={filtered}
         columns={columns}
         pageSize={25}
+        hidePagination={api}
         searchPlaceholder="Search students, universities, courses..."
         searchFilter={(row, query) =>
           row.name.toLowerCase().includes(query) ||
@@ -728,7 +729,7 @@ export default function MasterSheetPage() {
       {api ? (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Server page {studentPage + 1} of {Math.max(1, Math.ceil(studentTotal / STUDENT_PAGE))} ·{' '}
+            Page {studentPage + 1} of {Math.max(1, Math.ceil(studentTotal / STUDENT_PAGE))} ·{' '}
             {studentTotal} students
           </span>
           <div className="flex gap-2">
@@ -738,7 +739,7 @@ export default function MasterSheetPage() {
               disabled={studentPage <= 0 || loading}
               onClick={() => setStudentPage((p) => Math.max(0, p - 1))}
             >
-              <ChevronLeft className="mr-1 h-4 w-4" /> Prev
+              <ChevronLeft className="mr-1 h-4 w-4" /> Previous
             </Button>
             <Button
               variant="outline"
