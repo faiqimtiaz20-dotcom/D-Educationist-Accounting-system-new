@@ -27,6 +27,8 @@ import { useDataStore } from '@/store/data-store'
 import { isDateLocked } from '@/store/settings-store'
 import {
   createReceivable as apiCreateReceivable,
+  deleteReceivable as apiDeleteReceivable,
+  updateReceivable as apiUpdateReceivable,
 } from '@/lib/revenue-api'
 import type { Currency, Receivable, ReconciliationStatus } from '@/types'
 import { History, Plus } from 'lucide-react'
@@ -121,8 +123,19 @@ export default function ReceivablesPage() {
 
   const handleDelete = (row: Receivable) => {
     if (!confirm('Delete this receipt?')) return
-    deleteReceivable(row.id)
-    toast.success('Receipt deleted')
+    void runSubmit(async () => {
+      try {
+        if (api) {
+          await apiDeleteReceivable(row.id)
+          await reload()
+        } else {
+          deleteReceivable(row.id)
+        }
+        toast.success('Receipt deleted')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Delete failed')
+      }
+    })
   }
 
   const loadInvoice = (invoiceId: string) => {
@@ -181,14 +194,28 @@ export default function ReceivablesPage() {
     }
 
     void runSubmit(async () => {
-      if (isEdit && editId) {
-        updateReceivable(editId, payload)
-        toast.success('Receipt updated')
-        setDialogOpen(false)
-        return
-      }
-
       try {
+        if (isEdit && editId) {
+          if (api) {
+            await apiUpdateReceivable(editId, {
+              bankAccountId: form.bankAccountId,
+              currencyCode: form.currency,
+              amountReceived: form.amountReceived,
+              exchangeRate: form.exchangeRate,
+              receiptDate: form.receiptDate,
+              reconciliationStatus: form.reconciliationStatus,
+              isPartial: willBePartial ?? true,
+              notes: form.notes || null,
+            })
+            await reload()
+          } else {
+            updateReceivable(editId, payload)
+          }
+          toast.success('Receipt updated')
+          setDialogOpen(false)
+          return
+        }
+
         if (api) {
           await apiCreateReceivable({
             branchId: selectedInvoice.branchId,

@@ -57,15 +57,25 @@ export function saveTokens(tokens: TokenBundle | null) {
     localStorage.removeItem(TOKEN_KEY)
     return
   }
+  // New session — allow a future unauthorized notice again.
+  unauthorizedFired = false
   localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens))
 }
 
 let refreshPromise: Promise<TokenBundle | null> | null = null
 let onUnauthorized: (() => void) | null = null
+/** Prevent toast/logout spam when many parallel requests all get 401. */
+let unauthorizedFired = false
 
 /** Register a handler for hard 401 after refresh failure (e.g. force logout). */
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
+}
+
+function notifyUnauthorized() {
+  if (unauthorizedFired) return
+  unauthorizedFired = true
+  onUnauthorized?.()
 }
 
 async function refreshTokens(): Promise<TokenBundle | null> {
@@ -126,14 +136,14 @@ export async function apiFetch<T>(
     })
     const refreshed = await refreshPromise
     if (refreshed) return apiFetch<T>(path, init, false)
-    onUnauthorized?.()
+    notifyUnauthorized()
   }
 
   // SPA / ngrok catch-all can return index.html with HTTP 200 for /api/* when
   // the proxy misses — treat HTML as an auth/config failure, not JSON data.
   const contentType = res.headers.get('content-type') ?? ''
   if (contentType.includes('text/html')) {
-    onUnauthorized?.()
+    if (!isAuthEndpoint) notifyUnauthorized()
     throw new ApiError(
       res.status === 200 ? 401 : res.status,
       'Session expired or API unreachable — please sign in again',
@@ -152,8 +162,9 @@ export async function apiFetch<T>(
     if (res.status === 403) {
       message = message || 'You do not have permission for this action'
     }
-    if (res.status === 401) {
-      onUnauthorized?.()
+    // Login/refresh 401 is a normal credential failure — do not force logout toast.
+    if (res.status === 401 && !isAuthEndpoint) {
+      notifyUnauthorized()
     }
     throw new ApiError(res.status, message)
   }

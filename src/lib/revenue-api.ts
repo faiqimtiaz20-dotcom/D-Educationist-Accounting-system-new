@@ -376,6 +376,25 @@ export function createReceivable(body: {
   })
 }
 
+export function updateReceivable(
+  id: string,
+  body: {
+    bankAccountId?: string
+    currencyCode?: string
+    amountReceived?: number
+    exchangeRate?: number
+    receiptDate?: string
+    reconciliationStatus?: ReconciliationStatus
+    isPartial?: boolean
+    notes?: string | null
+  },
+) {
+  return apiFetch<ApiReceivable>(`/receivables/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
 export function allocateReceivable(
   id: string,
   allocations: Array<{ invoiceId: string; allocatedAmount: number }>,
