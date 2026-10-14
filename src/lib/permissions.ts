@@ -236,6 +236,19 @@ export function canTopUpPettyCash(
   return canViewAllBranches(subject)
 }
 
+/**
+ * Expense self-approve: Tenant Admin / Branch Manager / Accountant.
+ * Cashier and other roles cannot approve their own expense.
+ */
+export function canSelfApproveExpense(role: UserRole | undefined | null): boolean {
+  if (!role) return false
+  return (
+    role === 'Super Admin' ||
+    role === 'Branch Manager' ||
+    role === 'Accountant'
+  )
+}
+
 export function canEditPermissionMatrix(role: UserRole) {
   return role === 'Super Admin'
 }

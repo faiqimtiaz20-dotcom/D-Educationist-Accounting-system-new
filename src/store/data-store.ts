@@ -173,7 +173,12 @@ interface DataState {
   updateExpense: (id: string, expense: Partial<Expense>) => void
   deleteExpense: (id: string) => void
 
-  processApproval: (id: string, status: 'Approved' | 'Rejected', approverId: string) => boolean
+  processApproval: (
+    id: string,
+    status: 'Approved' | 'Rejected',
+    approverId: string,
+    opts?: { allowExpenseSelfApprove?: boolean },
+  ) => boolean
 
   addUniversity: (university: Omit<University, 'id' | 'universityNo'>) => void
   updateUniversity: (id: string, university: Partial<University>) => void
@@ -739,11 +744,15 @@ export const useDataStore = create<DataState>()(
           }
         }),
 
-      processApproval: (id, status, approverId) => {
+      processApproval: (id, status, approverId, opts) => {
         const s = get()
         const approval = s.approvals.find((a) => a.id === id)
         if (!approval || approval.status !== 'Pending') return false
-        if (approval.requestedById === approverId) return false
+        if (approval.requestedById === approverId) {
+          const expenseSelfOk =
+            approval.type === 'Expense' && opts?.allowExpenseSelfApprove
+          if (!expenseSelfOk) return false
+        }
 
         const expenses =
           approval.type === 'Expense' && approval.sourceId

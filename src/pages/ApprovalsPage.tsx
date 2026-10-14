@@ -10,6 +10,7 @@ import { isApiMode } from '@/lib/api-client'
 import { formatCurrency } from '@/lib/calculations'
 import { branchFilterOptions } from '@/lib/filter-options'
 import { getBranchName } from '@/lib/org'
+import { canSelfApproveExpense } from '@/lib/permissions'
 import {
   decideApproval,
   listApprovals,
@@ -79,9 +80,14 @@ export default function ApprovalsPage() {
       toast.error('Approval request not found — refresh and try again')
       return
     }
-    if (approval.requestedById && approval.requestedById === user.id) {
+    const isOwn = Boolean(approval.requestedById && approval.requestedById === user.id)
+    const expenseSelfOk =
+      approval.type === 'Expense' && canSelfApproveExpense(user.role)
+    if (isOwn && !expenseSelfOk) {
       toast.error(
-        'Cannot approve your own request (segregation of duties). Ask another authorised user.',
+        approval.type === 'Expense'
+          ? 'Cashiers cannot approve their own expense. Ask another authorised user.'
+          : 'Cannot approve your own request (segregation of duties). Ask another authorised user.',
       )
       return
     }
@@ -92,7 +98,9 @@ export default function ApprovalsPage() {
         await reload()
         toast.success(`Request ${status.toLowerCase()}`)
       } else {
-        const ok = processApproval(id, status, user.id)
+        const ok = processApproval(id, status, user.id, {
+          allowExpenseSelfApprove: canSelfApproveExpense(user.role),
+        })
         if (ok) toast.success(`Request ${status.toLowerCase()}`)
         else toast.error('Unable to process approval — check segregation of duties')
       }

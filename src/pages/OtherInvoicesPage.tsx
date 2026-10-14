@@ -27,13 +27,14 @@ import { getOtherInvoiceLineTotal, getOtherInvoiceTotal } from '@/lib/other-invo
 import { canViewAllBranches } from '@/lib/permissions'
 import { useAppStore } from '@/store/app-store'
 import { useDataStore } from '@/store/data-store'
-import { isDateLocked } from '@/store/settings-store'
+import { isDateLocked, useSettingsStore } from '@/store/settings-store'
 import { useRevenueApiSync } from '@/hooks/useRevenueApiSync'
 import {
   createOtherInvoice as apiCreateOther,
   deleteOtherInvoice as apiDeleteOther,
   mapApiOtherInvoice,
   recordOtherInvoicePayment as apiRecordPayment,
+  sendOtherInvoice as apiSendOther,
   updateOtherInvoice as apiUpdateOther,
 } from '@/lib/revenue-api'
 import type { Currency, OtherInvoice, OtherInvoiceLine, OtherInvoiceStatus } from '@/types'
@@ -45,6 +46,14 @@ const otherInvoiceStatuses: OtherInvoiceStatus[] = ['Draft', 'Sent', 'Paid', 'Cl
 /** Manual edit statuses — Paid only via Record payment (bank + GL). */
 const editableStatuses: OtherInvoiceStatus[] = ['Draft', 'Sent', 'Closed']
 const currencies: Currency[] = ['PKR', 'GBP', 'USD', 'CAD', 'AUD', 'EUR']
+
+function applyTpl(template: string, vars: Record<string, string>) {
+  let out = template
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{{${k}}}`, v)
+  }
+  return out
+}
 
 const formatDate = (iso: string) => {
   const [year, month, day] = iso.split('-')
@@ -75,6 +84,8 @@ const emptyForm = (branchId: string) => ({
 
 export default function OtherInvoicesPage() {
   const currentUser = useCurrentUser()
+  const orgName = useSettingsStore((s) => s.orgName)
+  const branding = useSettingsStore((s) => s.invoiceBranding)
   const isSuperAdmin = currentUser ? canViewAllBranches(currentUser) : false
   const { canWrite } = useModulePermission('Invoices & Receivables')
   const { api, reload, banks, loading } = useRevenueApiSync()
@@ -86,12 +97,16 @@ export default function OtherInvoicesPage() {
 
   const branchInvoices = useBranchFilter(otherInvoices)
   const defaultBranch = selectedBranchId === 'all' ? 'khi' : selectedBranchId
+  const brandName = orgName || "D' Educationist"
 
   const [activeStatus, setActiveStatus] = useState('all')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [previewInvoice, setPreviewInvoice] = useState<OtherInvoice | null>(null)
+  const [sendInvoice, setSendInvoice] = useState<OtherInvoice | null>(null)
+  const [isResend, setIsResend] = useState(false)
+  const [emailForm, setEmailForm] = useState({ to: '', cc: '', subject: '', body: '' })
   const [payInvoice, setPayInvoice] = useState<OtherInvoice | null>(null)
   const [payForm, setPayForm] = useState({
     bankAccountId: '',
@@ -102,6 +117,7 @@ export default function OtherInvoicesPage() {
   })
   const [form, setForm] = useState(() => emptyForm(defaultBranch))
   const { submitting, runSubmit } = useSubmitState()
+  const { submitting: sending, runSubmit: runSend } = useSubmitState()
 
   const openPay = (invoice: OtherInvoice) => {
     const total = getOtherInvoiceTotal(invoice)
@@ -196,35 +212,102 @@ export default function OtherInvoicesPage() {
     setDialogOpen(true)
   }
 
-  const handleSend = async (invoice: OtherInvoice): Promise<boolean> => {
+  const prefillEmail = (invoice: OtherInvoice) => {
+    const amount = getOtherInvoiceTotal(invoice)
+    const vars = {
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: formatDate(invoice.invoiceDate),
+      amount: formatCurrency(amount, invoice.currency),
+      orgName: brandName,
+      students: invoice.billTo,
+      universities: invoice.category,
+      documentTitle: branding.documentTitle || 'Invoice',
+    }
+    setSendInvoice(invoice)
+    setEmailForm({
+      to: '',
+      cc: '',
+      subject: applyTpl(
+        branding.emailSubject || 'Invoice {{invoiceNo}} — {{orgName}}',
+        vars,
+      ),
+      body: applyTpl(branding.emailBody || '', vars),
+    })
+  }
+
+  const openSend = (invoice: OtherInvoice) => {
     if (!canWrite) {
       toast.error('You do not have permission to send invoices')
-      return false
+      return
     }
     if (invoice.status !== 'Draft') {
       toast.error('Only draft invoices can be sent')
-      return false
+      return
     }
-    if (isDateLocked(invoice.invoiceDate)) {
+    setIsResend(false)
+    prefillEmail(invoice)
+  }
+
+  const openResend = (invoice: OtherInvoice) => {
+    if (!canWrite) {
+      toast.error('You do not have permission to send invoices')
+      return
+    }
+    if (invoice.status === 'Draft') {
+      toast.error('Draft invoices must be sent first')
+      return
+    }
+    setIsResend(true)
+    prefillEmail(invoice)
+  }
+
+  const handleSendEmail = async () => {
+    if (!sendInvoice) return
+    if (!canWrite) {
+      toast.error('You do not have permission to send invoices')
+      return
+    }
+    if (isResend && !emailForm.to.trim()) {
+      toast.error('Recipient (To) is required to resend')
+      return
+    }
+    if (!isResend && isDateLocked(sendInvoice.invoiceDate)) {
       toast.error('This period is locked — cannot post to a closed fiscal period')
-      return false
+      return
     }
-    const result = await runSubmit(async () => {
+    await runSend(async () => {
       try {
         if (api) {
-          await apiUpdateOther(invoice.id, { status: 'Sent' })
+          const res = await apiSendOther(sendInvoice.id, {
+            to: emailForm.to.trim() || undefined,
+            cc: emailForm.cc.trim() || undefined,
+            subject: emailForm.subject,
+            body: emailForm.body,
+          })
           await reload()
+          if (res.emailSent) {
+            toast.success(`Invoice ${sendInvoice.invoiceNo} emailed to ${emailForm.to}`)
+          } else if (emailForm.to.trim()) {
+            toast.warning(
+              res.message ??
+                `Invoice marked Sent; email not delivered (configure Settings → Email)`,
+            )
+          } else {
+            toast.success(res.message ?? `Invoice ${sendInvoice.invoiceNo} marked Sent`)
+          }
         } else {
-          updateOtherInvoice(invoice.id, { status: 'Sent' })
+          if (!isResend) updateOtherInvoice(sendInvoice.id, { status: 'Sent' })
+          toast.success(
+            emailForm.to.trim()
+              ? `Invoice ${sendInvoice.invoiceNo} sent to ${emailForm.to}`
+              : `Invoice ${sendInvoice.invoiceNo} marked Sent`,
+          )
         }
-        toast.success(`Invoice ${invoice.invoiceNo} marked as Sent`)
-        return true
+        setSendInvoice(null)
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Send failed')
-        return false
+        toast.error(err instanceof Error ? err.message : isResend ? 'Resend failed' : 'Send failed')
       }
     })
-    return result === true
   }
 
   const handleDelete = async (invoice: OtherInvoice) => {
@@ -398,13 +481,24 @@ export default function OtherInvoicesPage() {
             {canWrite && row.status === 'Draft' && (
               <DropdownMenuItem
                 className="text-primary"
-                disabled={submitting}
+                disabled={sending}
                 onSelect={(e) => {
                   e.preventDefault()
-                  void handleSend(row)
+                  openSend(row)
                 }}
               >
-                <Send /> Mark as Sent
+                <Send /> Send / Email
+              </DropdownMenuItem>
+            )}
+            {canWrite && row.status !== 'Draft' && (
+              <DropdownMenuItem
+                disabled={sending}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  openResend(row)
+                }}
+              >
+                <Send /> Resend email
               </DropdownMenuItem>
             )}
             {canWrite && row.status === 'Sent' && (
@@ -729,15 +823,13 @@ export default function OtherInvoicesPage() {
                 {canWrite && previewInvoice.status === 'Draft' && (
                   <Button
                     variant="outline"
-                    loading={submitting}
+                    loading={sending}
                     onClick={() => {
-                      void (async () => {
-                        const ok = await handleSend(previewInvoice)
-                        if (ok) setPreviewInvoice(null)
-                      })()
+                      openSend(previewInvoice)
+                      setPreviewInvoice(null)
                     }}
                   >
-                    <Send className="mr-1.5 h-4 w-4" /> Mark as Sent
+                    <Send className="mr-1.5 h-4 w-4" /> Send / Email
                   </Button>
                 )}
                 {canWrite && previewInvoice.status === 'Sent' && (
@@ -754,6 +846,67 @@ export default function OtherInvoicesPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!sendInvoice} onOpenChange={(open) => !open && setSendInvoice(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" /> {isResend ? 'Resend' : 'Send'} Invoice{' '}
+              {sendInvoice?.invoiceNo}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
+              <Input
+                type="email"
+                value={emailForm.to}
+                onChange={(e) => setEmailForm((p) => ({ ...p, to: e.target.value }))}
+                placeholder="accounts@client.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Bill to: {sendInvoice?.billTo} — enter the client accounts email to deliver PDF.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>CC</Label>
+              <Input
+                value={emailForm.cc}
+                onChange={(e) => setEmailForm((p) => ({ ...p, cc: e.target.value }))}
+                placeholder="Comma-separated emails (optional)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input
+                value={emailForm.subject}
+                onChange={(e) => setEmailForm((p) => ({ ...p, subject: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Body</Label>
+              <Textarea
+                rows={8}
+                value={emailForm.body}
+                onChange={(e) => setEmailForm((p) => ({ ...p, body: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setSendInvoice(null)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSendEmail()} loading={sending}>
+                <Send className="mr-1.5 h-4 w-4" />{' '}
+                {isResend
+                  ? 'Resend'
+                  : emailForm.to.trim()
+                    ? 'Send email'
+                    : 'Mark as Sent'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

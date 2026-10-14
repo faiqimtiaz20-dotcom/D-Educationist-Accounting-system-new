@@ -353,6 +353,22 @@ export function deleteOtherInvoice(id: string) {
   return apiFetch<{ success: boolean }>(`/other-invoices/${id}`, { method: 'DELETE' })
 }
 
+export function sendOtherInvoice(
+  id: string,
+  email?: { to?: string; cc?: string; subject?: string; body?: string },
+) {
+  return apiFetch<
+    ApiOtherInvoice & {
+      message?: string
+      emailSent?: boolean
+      emailError?: string | null
+    }
+  >(`/other-invoices/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify(email ?? {}),
+  })
+}
+
 export function recordOtherInvoicePayment(
   id: string,
   body: {
