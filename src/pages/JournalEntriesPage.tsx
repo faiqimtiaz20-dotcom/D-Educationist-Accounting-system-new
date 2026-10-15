@@ -224,11 +224,11 @@ export default function JournalEntriesPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label>Date</Label>
+                <Label required>Date</Label>
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label required>Branch</Label>
                 <Select value={branchId} onValueChange={setBranchId}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -239,7 +239,7 @@ export default function JournalEntriesPage() {
                 </Select>
               </div>
               <div className="space-y-2 sm:col-span-1">
-                <Label>Description</Label>
+                <Label required>Description</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Entry description" rows={1} />
               </div>
             </div>

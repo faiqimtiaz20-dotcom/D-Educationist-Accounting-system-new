@@ -775,7 +775,7 @@ export default function InvoicesPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Invoice Date</Label>
+                <Label required>Invoice Date</Label>
                 <Input type="date" value={form.invoiceDate} onChange={(e) => setForm((p) => ({ ...p, invoiceDate: e.target.value }))} />
               </div>
               <div className="space-y-2">
@@ -783,7 +783,7 @@ export default function InvoicesPage() {
                 <Input value={form.poNumber} onChange={(e) => setForm((p) => ({ ...p, poNumber: e.target.value }))} placeholder="Optional" />
               </div>
               <div className="space-y-2">
-                <Label>Currency</Label>
+                <Label required>Currency</Label>
                 <Select
                   disabled={form.lines.length > 0 || editingHasPayments}
                   value={form.currency}
@@ -802,7 +802,7 @@ export default function InvoicesPage() {
               </div>
               {isEdit && (
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label required>Status</Label>
                   <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as InvoiceStatus }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -853,7 +853,7 @@ export default function InvoicesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Students (select one or more from the same university)</Label>
+              <Label required>Students (select one or more from the same university)</Label>
               {lockedUniversity && (
                 <p className="text-xs text-muted-foreground">
                   Locked to <span className="font-medium text-foreground">{lockedUniversity}</span> — only students from this university can be added.
@@ -1132,7 +1132,7 @@ export default function InvoicesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
+              <Label required={isResend}>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
               <Input
                 type="email"
                 value={emailForm.to}

@@ -364,7 +364,7 @@ export default function SubAgentCommissionsPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Sub-Agent</Label>
+                <Label required>Sub-Agent</Label>
                 <Select value={form.subAgentId} onValueChange={selectSubAgent}>
                   <SelectTrigger><SelectValue placeholder="Select sub-agent" /></SelectTrigger>
                   <SelectContent>
@@ -375,7 +375,7 @@ export default function SubAgentCommissionsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Invoice</Label>
+                <Label required>Invoice</Label>
                 <Select value={form.invoiceId} onValueChange={loadInvoice}>
                   <SelectTrigger><SelectValue placeholder="Select invoice" /></SelectTrigger>
                   <SelectContent>
@@ -444,21 +444,21 @@ export default function SubAgentCommissionsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Commission earned / base ({form.currency})</Label>
+                <Label required>Commission earned / base ({form.currency})</Label>
                 <Input type="number" min={0} step="0.01" value={form.grossFee || ''} onChange={(e) => setForm((p) => ({ ...p, grossFee: Number(e.target.value) }))} />
                 <p className="text-xs text-muted-foreground">
                   Auto-filled from invoice commission (not tuition). Sub-agent % applies to this amount.
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Rate Given (%)</Label>
+                <Label required>Rate Given (%)</Label>
                 <Input type="number" min={0} max={100} value={form.rateGiven || ''} onChange={(e) => setForm((p) => ({ ...p, rateGiven: Number(e.target.value) }))} />
                 <p className="text-xs text-muted-foreground">
                   Auto-filled from Settings → Registered Universities (Agent % for student&apos;s university + course). You can override.
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Exchange Rate (to PKR)</Label>
+                <Label required>Exchange Rate (to PKR)</Label>
                 <Input type="number" min={0} step="0.01" value={form.exchangeRate || ''} onChange={(e) => setForm((p) => ({ ...p, exchangeRate: Number(e.target.value) }))} />
               </div>
               <div className="space-y-2">
@@ -466,7 +466,7 @@ export default function SubAgentCommissionsPage() {
                 <Input type="number" min={0} step="0.01" value={form.followOnBonus || ''} onChange={(e) => setForm((p) => ({ ...p, followOnBonus: Number(e.target.value) }))} />
               </div>
               <div className="space-y-2">
-                <Label>Currency</Label>
+                <Label required>Currency</Label>
                 <Select value={form.currency} onValueChange={(v) => setForm((p) => ({ ...p, currency: v as Currency }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -477,7 +477,7 @@ export default function SubAgentCommissionsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label required>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as SubAgentCommission['status'] }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>

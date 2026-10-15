@@ -289,7 +289,7 @@ export default function EmailSettingsPage() {
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Provider</Label>
+                <Label required>Provider</Label>
                 <Select
                   value={provider}
                   onValueChange={(v) => setProvider(v as SmtpProvider)}
@@ -308,7 +308,7 @@ export default function EmailSettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>From email</Label>
+                <Label required>From email</Label>
                 <Input
                   type="email"
                   value={fromEmail}
@@ -336,7 +336,7 @@ export default function EmailSettingsPage() {
               {provider === 'CUSTOM' ? (
                 <>
                   <div className="space-y-2">
-                    <Label>Host</Label>
+                    <Label required>Host</Label>
                     <Input
                       value={host}
                       onChange={(e) => setHost(e.target.value)}
@@ -344,7 +344,7 @@ export default function EmailSettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Port</Label>
+                    <Label required>Port</Label>
                     <Input
                       value={port}
                       onChange={(e) => setPort(e.target.value)}
@@ -382,7 +382,7 @@ export default function EmailSettingsPage() {
             </CardHeader>
             <CardContent className="flex flex-wrap items-end gap-3">
               <div className="min-w-[220px] flex-1 space-y-2">
-                <Label>To</Label>
+                <Label required>To</Label>
                 <Input
                   type="email"
                   value={testTo}

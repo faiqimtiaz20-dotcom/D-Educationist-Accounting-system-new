@@ -739,15 +739,15 @@ export default function PayrollPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label>Full Name</Label>
+                <Label required>Full Name</Label>
                 <Input value={empForm.name} onChange={(e) => setEmpForm({ ...empForm, name: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Designation</Label>
+                <Label required>Designation</Label>
                 <Input value={empForm.designation} onChange={(e) => setEmpForm({ ...empForm, designation: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label required>Branch</Label>
                 <Select
                   value={empForm.branchId || undefined}
                   onValueChange={(v) => setEmpForm({ ...empForm, branchId: v })}
@@ -804,7 +804,7 @@ export default function PayrollPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Employee</Label>
+              <Label required>Employee</Label>
               <Select value={reimbForm.employeeId} onValueChange={(v) => setReimbForm({ ...reimbForm, employeeId: v })}>
                 <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
                 <SelectContent>
@@ -816,7 +816,7 @@ export default function PayrollPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Claim Type</Label>
+                <Label required>Claim Type</Label>
                 <Select value={reimbForm.type} onValueChange={(v) => setReimbForm({ ...reimbForm, type: v as Reimbursement['type'] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -825,11 +825,11 @@ export default function PayrollPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Date</Label>
+                <Label required>Date</Label>
                 <Input type="date" value={reimbForm.date} onChange={(e) => setReimbForm({ ...reimbForm, date: e.target.value })} />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Amount (PKR)</Label>
+                <Label required>Amount (PKR)</Label>
                 <Input type="number" value={reimbForm.amount || ''} onChange={(e) => setReimbForm({ ...reimbForm, amount: Number(e.target.value) })} />
               </div>
               <div className="space-y-2 sm:col-span-2">

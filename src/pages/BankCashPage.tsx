@@ -417,7 +417,7 @@ export default function BankCashPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Account Name</Label>
+              <Label required>Account Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -426,7 +426,7 @@ export default function BankCashPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Bank Name</Label>
+                <Label required>Bank Name</Label>
                 <Input
                   value={form.bankName}
                   onChange={(e) => setForm({ ...form, bankName: e.target.value })}
@@ -434,7 +434,7 @@ export default function BankCashPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Account No.</Label>
+                <Label required>Account No.</Label>
                 <Input
                   value={form.accountNo}
                   onChange={(e) => setForm({ ...form, accountNo: e.target.value })}
@@ -444,7 +444,7 @@ export default function BankCashPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label required>Branch</Label>
                 <Select
                   value={form.branchId || undefined}
                   onValueChange={(v) => setForm({ ...form, branchId: v })}
@@ -462,7 +462,7 @@ export default function BankCashPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Currency</Label>
+                <Label required>Currency</Label>
                 <Select
                   value={form.currency}
                   onValueChange={(v) => setForm({ ...form, currency: v as Currency })}

@@ -141,7 +141,7 @@ export default function CrmMailDeliveryPage() {
 
       <div className="max-w-xl space-y-6 rounded-lg border bg-card p-6">
         <div className="space-y-2">
-          <Label>Delivery mode</Label>
+          <Label required>Delivery mode</Label>
           <Select
             value={mode}
             onValueChange={(v) => setMode(v as MailDeliveryMode)}
@@ -226,7 +226,7 @@ export default function CrmMailDeliveryPage() {
         </div>
 
         <div className="border-t pt-4 space-y-2">
-          <Label>Relay self-test (uses Cloudways server SMTP, not tenant config)</Label>
+          <Label required>Relay self-test (uses Cloudways server SMTP, not tenant config)</Label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               type="email"

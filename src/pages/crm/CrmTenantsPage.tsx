@@ -238,7 +238,7 @@ export default function CrmTenantsPage() {
           <form onSubmit={(e) => void submitCreate(e)} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="code">Tenant code</Label>
+                <Label htmlFor="code" required>Tenant code</Label>
                 <Input
                   id="code"
                   placeholder="ACME"
@@ -251,7 +251,7 @@ export default function CrmTenantsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Initial status</Label>
+                <Label htmlFor="status" required>Initial status</Label>
                 <Select
                   value={form.status}
                   onValueChange={(v) =>
@@ -271,7 +271,7 @@ export default function CrmTenantsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Company name</Label>
+              <Label htmlFor="name" required>Company name</Label>
               <Input
                 id="name"
                 value={form.name}
@@ -305,7 +305,7 @@ export default function CrmTenantsPage() {
               <p className="mb-3 text-sm font-medium">Tenant Admin account</p>
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label htmlFor="adminFullName">Full name</Label>
+                  <Label htmlFor="adminFullName" required>Full name</Label>
                   <Input
                     id="adminFullName"
                     value={form.adminFullName}
@@ -316,7 +316,7 @@ export default function CrmTenantsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="adminEmail">Email (global unique)</Label>
+                  <Label htmlFor="adminEmail" required>Email (global unique)</Label>
                   <Input
                     id="adminEmail"
                     type="email"
@@ -328,7 +328,7 @@ export default function CrmTenantsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="adminPassword">Password</Label>
+                  <Label htmlFor="adminPassword" required>Password</Label>
                   <Input
                     id="adminPassword"
                     type="password"

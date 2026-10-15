@@ -199,7 +199,7 @@ export default function SubAgentsPage() {
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label>Sub-Agent Name</Label>
+              <Label required>Sub-Agent Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-2">

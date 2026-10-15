@@ -1177,7 +1177,7 @@ export function SystemSettingsPage() {
                   <>
                     <div className="grid gap-3 sm:grid-cols-4">
                       <div className="space-y-2">
-                        <Label>Currency</Label>
+                        <Label required>Currency</Label>
                         <Select
                           value={fxDraft.currencyCode}
                           onValueChange={(v) => setFxDraft((p) => ({ ...p, currencyCode: v as Currency }))}
@@ -1195,7 +1195,7 @@ export function SystemSettingsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Rate to PKR</Label>
+                        <Label required>Rate to PKR</Label>
                         <Input
                           type="number"
                           min="0"
@@ -1205,7 +1205,7 @@ export function SystemSettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Effective date</Label>
+                        <Label required>Effective date</Label>
                         <Input
                           type="date"
                           value={fxDraft.effectiveDate}
@@ -1301,7 +1301,7 @@ export function SystemSettingsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>University Name</Label>
+              <Label required>University Name</Label>
               <Input value={uniForm.name} onChange={(e) => setUniForm({ ...uniForm, name: e.target.value })} />
             </div>
             <div className="space-y-2">
@@ -1323,7 +1323,7 @@ export function SystemSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Country</Label>
+              <Label required>Country</Label>
               <Select
                 value={uniForm.country || undefined}
                 onValueChange={(v) => setUniForm({ ...uniForm, country: v })}
@@ -1343,7 +1343,7 @@ export function SystemSettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Currency</Label>
+              <Label required>Currency</Label>
               <Select value={uniForm.currency} onValueChange={(v) => setUniForm({ ...uniForm, currency: v as Currency })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1419,7 +1419,7 @@ export function SystemSettingsPage() {
                         className="grid grid-cols-[1fr_72px_72px_36px] gap-2 items-end"
                       >
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Course</Label>
+                          <Label className="text-xs text-muted-foreground" required>Course</Label>
                           <Select
                             value={row.courseId || undefined}
                             onValueChange={(courseId) => {
@@ -1507,7 +1507,7 @@ export function SystemSettingsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Category Name</Label>
+              <Label required>Category Name</Label>
               <Input value={catName} onChange={(e) => setCatName(e.target.value)} />
             </div>
             <Button className="w-full" onClick={() => void handleSaveCategory()} loading={submitting}>
@@ -1524,7 +1524,7 @@ export function SystemSettingsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Country Name</Label>
+              <Label required>Country Name</Label>
               <Input
                 value={countryForm.name}
                 onChange={(e) => setCountryForm({ ...countryForm, name: e.target.value })}
@@ -1554,7 +1554,7 @@ export function SystemSettingsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Course Name</Label>
+              <Label required>Course Name</Label>
               <Input
                 value={courseForm.name}
                 onChange={(e) => setCourseForm({ name: e.target.value })}

@@ -151,7 +151,7 @@ export default function ContraEntriesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label required>Type</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => setForm({ ...form, type: v as ContraEntry['type'] })}
@@ -165,7 +165,7 @@ export default function ContraEntriesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Date</Label>
+              <Label required>Date</Label>
               <Input
                 type="date"
                 value={form.entryDate}
@@ -173,7 +173,7 @@ export default function ContraEntriesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Amount (PKR)</Label>
+              <Label required>Amount (PKR)</Label>
               <Input
                 type="number"
                 value={form.amount || ''}
@@ -182,7 +182,7 @@ export default function ContraEntriesPage() {
             </div>
             {(form.type === 'Cash-Bank' || form.type === 'Bank-Bank') && (
               <div className="space-y-2">
-                <Label>{form.type === 'Cash-Bank' ? 'To Bank' : 'To Bank'}</Label>
+                <Label required>{form.type === 'Cash-Bank' ? 'To Bank' : 'To Bank'}</Label>
                 <Select
                   value={form.toBankAccountId || pkrBanks[0]?.id}
                   onValueChange={(v) => setForm({ ...form, toBankAccountId: v })}
@@ -198,7 +198,7 @@ export default function ContraEntriesPage() {
             )}
             {form.type === 'Bank-Bank' && (
               <div className="space-y-2">
-                <Label>From Bank</Label>
+                <Label required>From Bank</Label>
                 <Select
                   value={form.fromBankAccountId || pkrBanks[1]?.id || pkrBanks[0]?.id}
                   onValueChange={(v) => setForm({ ...form, fromBankAccountId: v })}

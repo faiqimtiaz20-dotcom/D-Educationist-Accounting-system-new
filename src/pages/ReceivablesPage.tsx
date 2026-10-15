@@ -350,7 +350,7 @@ export default function ReceivablesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Linked Invoice</Label>
+              <Label required>Linked Invoice</Label>
               <Select value={form.invoiceId} onValueChange={loadInvoice}>
                 <SelectTrigger><SelectValue placeholder="Select invoice" /></SelectTrigger>
                 <SelectContent>
@@ -389,7 +389,7 @@ export default function ReceivablesPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Bank Account</Label>
+                <Label required>Bank Account</Label>
                 <Select value={form.bankAccountId} onValueChange={(v) => setForm((p) => ({ ...p, bankAccountId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
                   <SelectContent>
@@ -402,11 +402,11 @@ export default function ReceivablesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Receipt Date</Label>
+                <Label required>Receipt Date</Label>
                 <Input type="date" value={form.receiptDate} onChange={(e) => setForm((p) => ({ ...p, receiptDate: e.target.value }))} />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Payment Amount ({form.currency})</Label>
+                <Label required>Payment Amount ({form.currency})</Label>
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -429,11 +429,11 @@ export default function ReceivablesPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Exchange Rate (to PKR)</Label>
+                <Label required>Exchange Rate (to PKR)</Label>
                 <Input type="number" value={form.exchangeRate} onChange={(e) => setForm((p) => ({ ...p, exchangeRate: Number(e.target.value) }))} />
               </div>
               <div className="space-y-2">
-                <Label>Reconciliation</Label>
+                <Label required>Reconciliation</Label>
                 <Select value={form.reconciliationStatus} onValueChange={(v) => setForm((p) => ({ ...p, reconciliationStatus: v as ReconciliationStatus }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>

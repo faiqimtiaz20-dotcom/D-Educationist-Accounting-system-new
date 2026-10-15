@@ -387,7 +387,7 @@ export default function PettyCashPage() {
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label required>Type</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => {
@@ -425,7 +425,7 @@ export default function PettyCashPage() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label>Branch</Label>
+              <Label required>Branch</Label>
               <Select
                 value={form.branchId || undefined}
                 onValueChange={(v) => {
@@ -452,7 +452,7 @@ export default function PettyCashPage() {
             </div>
             {form.type === 'in' ? (
               <div className="space-y-2">
-                <Label>From bank account</Label>
+                <Label required>From bank account</Label>
                 <Select
                   value={form.bankAccountId || undefined}
                   onValueChange={(v) => setForm({ ...form, bankAccountId: v })}
@@ -479,7 +479,7 @@ export default function PettyCashPage() {
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label>Date</Label>
+              <Label required>Date</Label>
               <Input
                 type="date"
                 value={form.date}
@@ -488,7 +488,7 @@ export default function PettyCashPage() {
             </div>
             {form.type === 'out' ? (
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label required>Category</Label>
                 <Select
                   value={form.category || undefined}
                   onValueChange={(v) => setForm({ ...form, category: v })}
@@ -507,7 +507,7 @@ export default function PettyCashPage() {
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label required>Description</Label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -516,7 +516,7 @@ export default function PettyCashPage() {
             </div>
             {form.type === 'in' ? (
               <div className="space-y-2">
-                <Label>Amount</Label>
+                <Label required>Amount</Label>
                 <Input
                   type="number"
                   min={0}
@@ -537,7 +537,7 @@ export default function PettyCashPage() {
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Principal</Label>
+                  <Label required>Principal</Label>
                   <Input
                     type="number"
                     min={0}

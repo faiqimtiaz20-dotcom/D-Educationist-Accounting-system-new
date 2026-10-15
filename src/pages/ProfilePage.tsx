@@ -137,7 +137,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="profile-name">Full name</Label>
+              <Label htmlFor="profile-name" required>Full name</Label>
               <Input
                 id="profile-name"
                 value={fullName}
@@ -146,7 +146,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-email">Email</Label>
+              <Label htmlFor="profile-email" required>Email</Label>
               <Input
                 id="profile-email"
                 type="email"
@@ -187,7 +187,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current password</Label>
+              <Label htmlFor="current-password" required>Current password</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -197,7 +197,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-password">New password</Label>
+              <Label htmlFor="new-password" required>New password</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -207,7 +207,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm new password</Label>
+              <Label htmlFor="confirm-password" required>Confirm new password</Label>
               <Input
                 id="confirm-password"
                 type="password"

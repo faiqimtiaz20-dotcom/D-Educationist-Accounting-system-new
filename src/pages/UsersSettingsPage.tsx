@@ -525,11 +525,11 @@ export function UsersSettingsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Full Name</Label>
+              <Label required>Full Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label required>Email</Label>
               <Input
                 type="email"
                 value={form.email}
@@ -538,7 +538,7 @@ export function UsersSettingsPage() {
             </div>
             {api && (
               <div className="space-y-2">
-                <Label>{isEdit ? 'New password (optional)' : 'Password'}</Label>
+                <Label required={!isEdit}>{isEdit ? 'New password (optional)' : 'Password'}</Label>
                 <Input
                   type="password"
                   value={form.password ?? ''}
@@ -549,7 +549,7 @@ export function UsersSettingsPage() {
             )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Role</Label>
+                <Label required>Role</Label>
                 <Select
                   value={form.role}
                   onValueChange={(v) => setForm({ ...form, role: v as UserRole })}
@@ -567,7 +567,7 @@ export function UsersSettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label required>Branch</Label>
                 {seesAllBranches ? (
                   <Select
                     value={form.branchId}
@@ -603,7 +603,7 @@ export function UsersSettingsPage() {
             </div>
             {isEdit && editId !== currentUser?.id ? (
               <div className="space-y-2">
-                <Label>Account status</Label>
+                <Label required>Account status</Label>
                 <Select
                   value={form.isActive ? 'active' : 'disabled'}
                   onValueChange={(v) =>

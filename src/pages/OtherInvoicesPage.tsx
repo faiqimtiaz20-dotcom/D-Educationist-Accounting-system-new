@@ -593,7 +593,7 @@ export default function OtherInvoicesPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Invoice Date</Label>
+                <Label required>Invoice Date</Label>
                 <Input
                   type="date"
                   value={form.invoiceDate}
@@ -601,7 +601,7 @@ export default function OtherInvoicesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Currency</Label>
+                <Label required>Currency</Label>
                 <Select
                   value={form.currency}
                   onValueChange={(v) => setForm((p) => ({ ...p, currency: v as Currency }))}
@@ -619,7 +619,7 @@ export default function OtherInvoicesPage() {
                 </Select>
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Bill To</Label>
+                <Label required>Bill To</Label>
                 <Input
                   value={form.billTo}
                   onChange={(e) => setForm((p) => ({ ...p, billTo: e.target.value }))}
@@ -627,7 +627,7 @@ export default function OtherInvoicesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label required>Category</Label>
                 <Input
                   value={form.category}
                   onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
@@ -636,7 +636,7 @@ export default function OtherInvoicesPage() {
               </div>
               {isEdit && (
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label required>Status</Label>
                   <Select
                     value={form.status}
                     onValueChange={(v) => setForm((p) => ({ ...p, status: v as OtherInvoiceStatus }))}
@@ -656,7 +656,7 @@ export default function OtherInvoicesPage() {
               )}
               {isSuperAdmin && (
                 <div className="space-y-2">
-                  <Label>Branch</Label>
+                  <Label required>Branch</Label>
                   <Select
                     value={form.branchId}
                     onValueChange={(v) => setForm((p) => ({ ...p, branchId: v }))}
@@ -688,7 +688,7 @@ export default function OtherInvoicesPage() {
                   <CardContent className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-1">
-                        <Label className="text-xs">Description</Label>
+                        <Label className="text-xs" required>Description</Label>
                         <Input
                           value={line.description}
                           onChange={(e) => updateLine(line.id, { description: e.target.value })}
@@ -703,7 +703,7 @@ export default function OtherInvoicesPage() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Quantity</Label>
+                        <Label className="text-xs" required>Quantity</Label>
                         <Input
                           type="number"
                           min={0}
@@ -859,7 +859,7 @@ export default function OtherInvoicesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
+              <Label required={isResend}>To {isResend ? '' : '(optional — leave blank to mark Sent only)'}</Label>
               <Input
                 type="email"
                 value={emailForm.to}
@@ -924,7 +924,7 @@ export default function OtherInvoicesPage() {
                 </span>
               </p>
               <div className="space-y-2">
-                <Label>Bank account</Label>
+                <Label required>Bank account</Label>
                 <Select
                   value={payForm.bankAccountId}
                   onValueChange={(v) => setPayForm((p) => ({ ...p, bankAccountId: v }))}
@@ -943,7 +943,7 @@ export default function OtherInvoicesPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Amount ({payInvoice.currency})</Label>
+                  <Label required>Amount ({payInvoice.currency})</Label>
                   <Input
                     type="number"
                     min={0.01}
@@ -955,7 +955,7 @@ export default function OtherInvoicesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Receipt date</Label>
+                  <Label required>Receipt date</Label>
                   <Input
                     type="date"
                     value={payForm.receiptDate}
@@ -965,7 +965,7 @@ export default function OtherInvoicesPage() {
               </div>
               {payInvoice.currency !== 'PKR' && (
                 <div className="space-y-2">
-                  <Label>Exchange rate → PKR</Label>
+                  <Label required>Exchange rate → PKR</Label>
                   <Input
                     type="number"
                     min={0}

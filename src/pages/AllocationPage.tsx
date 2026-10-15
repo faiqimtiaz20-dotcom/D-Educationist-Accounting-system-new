@@ -149,7 +149,7 @@ export default function AllocationPage() {
       <Card>
         <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Select Bulk Remittance</Label>
+            <Label required>Select Bulk Remittance</Label>
             <Select value={selectedReceivableId} onValueChange={(v) => { setSelectedReceivableId(v); setAllocations([]) }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>

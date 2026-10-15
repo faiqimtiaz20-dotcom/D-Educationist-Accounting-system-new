@@ -768,11 +768,11 @@ export default function MasterSheetPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Student Name</Label>
+                <Label required>Student Name</Label>
                 <Input value={form.name} onChange={(e) => updateField('name', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>CNIC / Passport <span className="text-destructive">*</span></Label>
+                <Label required>CNIC / Passport</Label>
                 <Input
                   value={form.cnicPassport}
                   onChange={(e) => updateField('cnicPassport', e.target.value)}
@@ -789,7 +789,7 @@ export default function MasterSheetPage() {
                 <Input value={form.email} onChange={(e) => updateField('email', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Branch</Label>
+                <Label required>Branch</Label>
                 {isSuperAdmin ? (
                   <Select
                     value={form.branchId}
@@ -844,7 +844,7 @@ export default function MasterSheetPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Country</Label>
+                <Label required>Country</Label>
                 <Select value={form.country || undefined} onValueChange={loadCountry}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select country" />
@@ -864,7 +864,7 @@ export default function MasterSheetPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>University</Label>
+                <Label required>University</Label>
                 <Select
                   value={form.university || undefined}
                   onValueChange={loadUniversity}
@@ -903,7 +903,7 @@ export default function MasterSheetPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Course</Label>
+                <Label required>Course</Label>
                 {api ? (
                   <>
                     <Select
@@ -959,7 +959,7 @@ export default function MasterSheetPage() {
                 <Input value={form.group} onChange={(e) => updateField('group', e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Application Status</Label>
+                <Label required>Application Status</Label>
                 <Select
                   value={form.applicationStatus}
                   onValueChange={(v) => updateField('applicationStatus', v as ApplicationStatus)}

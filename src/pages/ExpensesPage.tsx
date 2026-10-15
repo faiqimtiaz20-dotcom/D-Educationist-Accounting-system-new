@@ -355,7 +355,7 @@ export default function ExpensesPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label>Vendor</Label>
+                <Label required>Vendor</Label>
                 {api && vendors.length > 0 ? (
                   <Select
                     value={vendors.find((v) => v.name === form.vendor)?.id ?? '__custom__'}
@@ -379,18 +379,18 @@ export default function ExpensesPage() {
                 <Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} placeholder="Vendor name" />
               </div>
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label required>Category</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Date</Label>
+                <Label required>Date</Label>
                 <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Payment Mode</Label>
+                <Label required>Payment Mode</Label>
                 <Select
                   value={form.paymentMode}
                   onValueChange={(v) =>
@@ -407,7 +407,7 @@ export default function ExpensesPage() {
               </div>
               {form.paymentMode === 'Cheque' && (
                 <div className="space-y-2">
-                  <Label>Cheque Number</Label>
+                  <Label required>Cheque Number</Label>
                   <Input
                     value={form.chequeNo}
                     onChange={(e) => setForm({ ...form, chequeNo: e.target.value })}
@@ -415,7 +415,7 @@ export default function ExpensesPage() {
                   />
                 </div>
               )}
-              <div className="space-y-2"><Label>Principal</Label><Input type="number" value={form.principal || ''} onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })} /></div>
+              <div className="space-y-2"><Label required>Principal</Label><Input type="number" value={form.principal || ''} onChange={(e) => setForm({ ...form, principal: Number(e.target.value) })} /></div>
               <div className="space-y-2"><Label>Sales Tax</Label><Input type="number" value={form.salesTax || ''} onChange={(e) => setForm({ ...form, salesTax: Number(e.target.value) })} /></div>
               <div className="space-y-2"><Label>SRB-SST</Label><Input type="number" value={form.srbSst || ''} onChange={(e) => setForm({ ...form, srbSst: Number(e.target.value) })} /></div>
               <div className="space-y-2"><Label>GST</Label><Input type="number" value={form.gst || ''} onChange={(e) => setForm({ ...form, gst: Number(e.target.value) })} /></div>

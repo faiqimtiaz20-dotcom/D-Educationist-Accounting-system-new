@@ -305,7 +305,7 @@ export default function SubAgentPaymentsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Commission</Label>
+              <Label required>Commission</Label>
               <Select value={form.commissionId} onValueChange={loadCommission}>
                 <SelectTrigger><SelectValue placeholder="Select commission" /></SelectTrigger>
                 <SelectContent>
@@ -342,11 +342,11 @@ export default function SubAgentPaymentsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Cheque No.</Label>
+                <Label required>Cheque No.</Label>
                 <Input value={form.chequeNo} onChange={(e) => setForm((p) => ({ ...p, chequeNo: e.target.value }))} placeholder="e.g. CHQ-4526" />
               </div>
               <div className="space-y-2">
-                <Label>Paying Bank</Label>
+                <Label required>Paying Bank</Label>
                 <Select value={form.bankAccountId} onValueChange={(v) => setForm((p) => ({ ...p, bankAccountId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
                   <SelectContent>
@@ -357,11 +357,11 @@ export default function SubAgentPaymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Payment Date</Label>
+                <Label required>Payment Date</Label>
                 <Input type="date" value={form.paymentDate} onChange={(e) => setForm((p) => ({ ...p, paymentDate: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Amount (PKR)</Label>
+                <Label required>Amount (PKR)</Label>
                 <div className="flex gap-2">
                   <Input type="number" min={0} step="0.01" value={form.amountPKR || ''} onChange={(e) => setForm((p) => ({ ...p, amountPKR: Number(e.target.value) }))} />
                   {selectedOutstanding > 0 && (
