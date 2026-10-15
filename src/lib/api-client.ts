@@ -42,6 +42,21 @@ type TokenBundle = {
 
 const TOKEN_KEY = 'dedu-auth-tokens'
 
+/** Short GET cache + in-flight dedupe — same responses, fewer remote round-trips. */
+const GET_CACHE_TTL_MS = 12_000
+const getCache = new Map<string, { expiresAt: number; data: unknown }>()
+const getInflight = new Map<string, Promise<unknown>>()
+
+function clearGetCache() {
+  getCache.clear()
+  getInflight.clear()
+}
+
+function isGetRequest(init: RequestInit) {
+  const method = (init.method ?? 'GET').toUpperCase()
+  return method === 'GET' || method === 'HEAD'
+}
+
 export function loadTokens(): TokenBundle | null {
   try {
     const raw = localStorage.getItem(TOKEN_KEY)
@@ -53,6 +68,7 @@ export function loadTokens(): TokenBundle | null {
 }
 
 export function saveTokens(tokens: TokenBundle | null) {
+  clearGetCache()
   if (!tokens) {
     localStorage.removeItem(TOKEN_KEY)
     return
@@ -117,60 +133,97 @@ export async function apiFetch<T>(
     safePath = path
   }
 
-  const headers = new Headers(init.headers)
-  if (!headers.has('Content-Type') && init.body) {
-    headers.set('Content-Type', 'application/json')
-  }
+  const isGet = isGetRequest(init)
+  // Mutations must not reuse stale list data
+  if (!isGet) clearGetCache()
+
   const tokens = loadTokens()
-  const isAuthEndpoint =
-    safePath.startsWith('/auth/login') || safePath.startsWith('/auth/refresh')
-  if (tokens?.accessToken && !isAuthEndpoint) {
-    headers.set('Authorization', `Bearer ${tokens.accessToken}`)
-  }
+  const cacheKey = isGet
+    ? `${tokens?.accessToken?.slice(-16) ?? 'anon'}:${safePath}`
+    : ''
 
-  const res = await fetch(`${getApiBaseUrl()}${safePath}`, { ...init, headers })
-
-  if (res.status === 401 && retry && tokens?.refreshToken && !isAuthEndpoint) {
-    refreshPromise ??= refreshTokens().finally(() => {
-      refreshPromise = null
-    })
-    const refreshed = await refreshPromise
-    if (refreshed) return apiFetch<T>(path, init, false)
-    notifyUnauthorized()
-  }
-
-  // SPA / ngrok catch-all can return index.html with HTTP 200 for /api/* when
-  // the proxy misses — treat HTML as an auth/config failure, not JSON data.
-  const contentType = res.headers.get('content-type') ?? ''
-  if (contentType.includes('text/html')) {
-    if (!isAuthEndpoint) notifyUnauthorized()
-    throw new ApiError(
-      res.status === 200 ? 401 : res.status,
-      'Session expired or API unreachable — please sign in again',
-    )
-  }
-
-  if (!res.ok) {
-    let message = `Request failed (${res.status})`
-    try {
-      const body = (await res.json()) as { message?: string | string[] }
-      if (Array.isArray(body.message)) message = body.message.join(', ')
-      else if (body.message) message = body.message
-    } catch {
-      /* ignore */
+  if (isGet && retry) {
+    const cached = getCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data as T
     }
-    if (res.status === 403) {
-      message = message || 'You do not have permission for this action'
+    const pending = getInflight.get(cacheKey)
+    if (pending) return pending as Promise<T>
+  }
+
+  const run = (async (): Promise<T> => {
+    const headers = new Headers(init.headers)
+    if (!headers.has('Content-Type') && init.body) {
+      headers.set('Content-Type', 'application/json')
     }
-    // Login/refresh 401 is a normal credential failure — do not force logout toast.
-    if (res.status === 401 && !isAuthEndpoint) {
+    const isAuthEndpoint =
+      safePath.startsWith('/auth/login') || safePath.startsWith('/auth/refresh')
+    if (tokens?.accessToken && !isAuthEndpoint) {
+      headers.set('Authorization', `Bearer ${tokens.accessToken}`)
+    }
+
+    const res = await fetch(`${getApiBaseUrl()}${safePath}`, { ...init, headers })
+
+    if (res.status === 401 && retry && tokens?.refreshToken && !isAuthEndpoint) {
+      refreshPromise ??= refreshTokens().finally(() => {
+        refreshPromise = null
+      })
+      const refreshed = await refreshPromise
+      if (refreshed) {
+        clearGetCache()
+        return apiFetch<T>(path, init, false)
+      }
       notifyUnauthorized()
     }
-    throw new ApiError(res.status, message)
+
+    // SPA / ngrok catch-all can return index.html with HTTP 200 for /api/* when
+    // the proxy misses — treat HTML as an auth/config failure, not JSON data.
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType.includes('text/html')) {
+      if (!isAuthEndpoint) notifyUnauthorized()
+      throw new ApiError(
+        res.status === 200 ? 401 : res.status,
+        'Session expired or API unreachable — please sign in again',
+      )
+    }
+
+    if (!res.ok) {
+      let message = `Request failed (${res.status})`
+      try {
+        const body = (await res.json()) as { message?: string | string[] }
+        if (Array.isArray(body.message)) message = body.message.join(', ')
+        else if (body.message) message = body.message
+      } catch {
+        /* ignore */
+      }
+      if (res.status === 403) {
+        message = message || 'You do not have permission for this action'
+      }
+      // Login/refresh 401 is a normal credential failure — do not force logout toast.
+      if (res.status === 401 && !isAuthEndpoint) {
+        notifyUnauthorized()
+      }
+      throw new ApiError(res.status, message)
+    }
+
+    if (res.status === 204) return undefined as T
+    const data = (await res.json()) as T
+    if (isGet && cacheKey) {
+      getCache.set(cacheKey, { data, expiresAt: Date.now() + GET_CACHE_TTL_MS })
+    }
+    return data
+  })()
+
+  if (isGet && cacheKey) {
+    getInflight.set(cacheKey, run)
+    try {
+      return await run
+    } finally {
+      getInflight.delete(cacheKey)
+    }
   }
 
-  if (res.status === 204) return undefined as T
-  return (await res.json()) as T
+  return run
 }
 
 export type PageResult<T> = {

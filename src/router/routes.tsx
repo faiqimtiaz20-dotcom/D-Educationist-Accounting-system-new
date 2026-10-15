@@ -1,52 +1,72 @@
+import { lazy } from 'react'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { GuestGuard } from '@/components/auth/GuestGuard'
 import { AppShell } from '@/components/layout/AppShell'
 import { RouteErrorBoundary } from '@/components/shared/RouteErrorBoundary'
 import LoginPage from '@/pages/LoginPage'
-import DashboardPage from '@/pages/DashboardPage'
-import MasterSheetPage from '@/pages/MasterSheetPage'
-import InvoicesPage from '@/pages/InvoicesPage'
-import OtherInvoicesPage from '@/pages/OtherInvoicesPage'
-import ReceivablesPage from '@/pages/ReceivablesPage'
-import AllocationPage from '@/pages/AllocationPage'
-import SubAgentsPage from '@/pages/SubAgentsPage'
-import SubAgentCommissionsPage from '@/pages/SubAgentCommissionsPage'
-import SubAgentPaymentsPage from '@/pages/SubAgentPaymentsPage'
-import PettyCashPage from '@/pages/PettyCashPage'
-import ExpensesPage from '@/pages/ExpensesPage'
-import BankCashPage from '@/pages/BankCashPage'
-import GeneralLedgerPage from '@/pages/GeneralLedgerPage'
-import JournalEntriesPage from '@/pages/JournalEntriesPage'
-import ContraEntriesPage from '@/pages/ContraEntriesPage'
-import TaxCompliancePage from '@/pages/TaxCompliancePage'
-import StudentLedgerPage from '@/pages/StudentLedgerPage'
-import VendorLedgerPage from '@/pages/VendorLedgerPage'
-import SubAgentLedgerPage from '@/pages/SubAgentLedgerPage'
-import PayrollPage from '@/pages/PayrollPage'
-import DocumentsPage from '@/pages/DocumentsPage'
-import ApprovalsPage from '@/pages/ApprovalsPage'
-import AuditTrailPage from '@/pages/AuditTrailPage'
-import { ReportsHubPage } from '@/pages/ReportsHubPage'
-import { ReportPage } from '@/pages/ReportPage'
-import CounsellorReportPage from '@/pages/CounsellorReportPage'
-import CountryWiseReportPage from '@/pages/CountryWiseReportPage'
-import UniversityWiseReportPage from '@/pages/UniversityWiseReportPage'
-import UniversityWisePLReportPage from '@/pages/UniversityWisePLReportPage'
-import BranchIncomeReportPage from '@/pages/BranchIncomeReportPage'
-import BranchExpensesReportPage from '@/pages/BranchExpensesReportPage'
-import BranchProfitReportPage from '@/pages/BranchProfitReportPage'
-import BranchCashPositionReportPage from '@/pages/BranchCashPositionReportPage'
-import ConsolidatedPLReportPage from '@/pages/ConsolidatedPLReportPage'
-import ConsolidatedBalanceSheetReportPage from '@/pages/ConsolidatedBalanceSheetReportPage'
-import ConsolidatedCashFlowReportPage from '@/pages/ConsolidatedCashFlowReportPage'
-import { BranchesSettingsPage } from '@/pages/BranchesSettingsPage'
-import { UsersSettingsPage } from '@/pages/UsersSettingsPage'
-import { SystemSettingsPage } from '@/pages/SystemSettingsPage'
-import EmailSettingsPage from '@/pages/EmailSettingsPage'
-import ProfilePage from '@/pages/ProfilePage'
-import CrmTenantsPage from '@/pages/crm/CrmTenantsPage'
-import CrmMailDeliveryPage from '@/pages/crm/CrmMailDeliveryPage'
 import type { RouteObject } from 'react-router-dom'
+
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const MasterSheetPage = lazy(() => import('@/pages/MasterSheetPage'))
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'))
+const OtherInvoicesPage = lazy(() => import('@/pages/OtherInvoicesPage'))
+const ReceivablesPage = lazy(() => import('@/pages/ReceivablesPage'))
+const AllocationPage = lazy(() => import('@/pages/AllocationPage'))
+const SubAgentsPage = lazy(() => import('@/pages/SubAgentsPage'))
+const SubAgentCommissionsPage = lazy(() => import('@/pages/SubAgentCommissionsPage'))
+const SubAgentPaymentsPage = lazy(() => import('@/pages/SubAgentPaymentsPage'))
+const PettyCashPage = lazy(() => import('@/pages/PettyCashPage'))
+const ExpensesPage = lazy(() => import('@/pages/ExpensesPage'))
+const BankCashPage = lazy(() => import('@/pages/BankCashPage'))
+const GeneralLedgerPage = lazy(() => import('@/pages/GeneralLedgerPage'))
+const JournalEntriesPage = lazy(() => import('@/pages/JournalEntriesPage'))
+const ContraEntriesPage = lazy(() => import('@/pages/ContraEntriesPage'))
+const TaxCompliancePage = lazy(() => import('@/pages/TaxCompliancePage'))
+const StudentLedgerPage = lazy(() => import('@/pages/StudentLedgerPage'))
+const VendorLedgerPage = lazy(() => import('@/pages/VendorLedgerPage'))
+const SubAgentLedgerPage = lazy(() => import('@/pages/SubAgentLedgerPage'))
+const PayrollPage = lazy(() => import('@/pages/PayrollPage'))
+const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'))
+const ApprovalsPage = lazy(() => import('@/pages/ApprovalsPage'))
+const AuditTrailPage = lazy(() => import('@/pages/AuditTrailPage'))
+const ReportsHubPage = lazy(() =>
+  import('@/pages/ReportsHubPage').then((m) => ({ default: m.ReportsHubPage })),
+)
+const ReportPage = lazy(() =>
+  import('@/pages/ReportPage').then((m) => ({ default: m.ReportPage })),
+)
+const CounsellorReportPage = lazy(() => import('@/pages/CounsellorReportPage'))
+const CountryWiseReportPage = lazy(() => import('@/pages/CountryWiseReportPage'))
+const UniversityWiseReportPage = lazy(() => import('@/pages/UniversityWiseReportPage'))
+const UniversityWisePLReportPage = lazy(() => import('@/pages/UniversityWisePLReportPage'))
+const BranchIncomeReportPage = lazy(() => import('@/pages/BranchIncomeReportPage'))
+const BranchExpensesReportPage = lazy(() => import('@/pages/BranchExpensesReportPage'))
+const BranchProfitReportPage = lazy(() => import('@/pages/BranchProfitReportPage'))
+const BranchCashPositionReportPage = lazy(
+  () => import('@/pages/BranchCashPositionReportPage'),
+)
+const ConsolidatedPLReportPage = lazy(() => import('@/pages/ConsolidatedPLReportPage'))
+const ConsolidatedBalanceSheetReportPage = lazy(
+  () => import('@/pages/ConsolidatedBalanceSheetReportPage'),
+)
+const ConsolidatedCashFlowReportPage = lazy(
+  () => import('@/pages/ConsolidatedCashFlowReportPage'),
+)
+const BranchesSettingsPage = lazy(() =>
+  import('@/pages/BranchesSettingsPage').then((m) => ({
+    default: m.BranchesSettingsPage,
+  })),
+)
+const UsersSettingsPage = lazy(() =>
+  import('@/pages/UsersSettingsPage').then((m) => ({ default: m.UsersSettingsPage })),
+)
+const SystemSettingsPage = lazy(() =>
+  import('@/pages/SystemSettingsPage').then((m) => ({ default: m.SystemSettingsPage })),
+)
+const EmailSettingsPage = lazy(() => import('@/pages/EmailSettingsPage'))
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
+const CrmTenantsPage = lazy(() => import('@/pages/crm/CrmTenantsPage'))
+const CrmMailDeliveryPage = lazy(() => import('@/pages/crm/CrmMailDeliveryPage'))
 
 export const routes: RouteObject[] = [
   {
